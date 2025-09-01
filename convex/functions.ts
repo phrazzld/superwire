@@ -21,7 +21,7 @@ export const storeEpisode = mutation({
       total: v.number(),
     }),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx: any, args: any) => {
     const episodeId = await ctx.db.insert("episodes", {
       ...args,
       createdAt: Date.now(),
@@ -46,7 +46,7 @@ export const storeArticle = mutation({
     editorialScore: v.optional(v.number()),
     tags: v.optional(v.array(v.string())),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx: any, args: any) => {
     const articleId = await ctx.db.insert("articles", {
       ...args,
       createdAt: Date.now(),
@@ -67,7 +67,7 @@ export const storeRawContent = mutation({
     pubDate: v.optional(v.string()),
     author: v.optional(v.string()),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx: any, args: any) => {
     const rawContentId = await ctx.db.insert("rawContent", {
       ...args,
       extractedAt: Date.now(),
@@ -79,10 +79,10 @@ export const storeRawContent = mutation({
 // Query to get episodes by date
 export const getEpisodesByDate = query({
   args: { date: v.string() },
-  handler: async (ctx, args) => {
+  handler: async (ctx: any, args: any) => {
     const episodes = await ctx.db
       .query("episodes")
-      .withIndex("by_date", (q) => q.eq("date", args.date))
+      .withIndex("by_date", (q: any) => q.eq("date", args.date))
       .collect();
     return episodes;
   },
@@ -91,10 +91,10 @@ export const getEpisodesByDate = query({
 // Query to get articles by date
 export const getArticlesByDate = query({
   args: { date: v.string() },
-  handler: async (ctx, args) => {
+  handler: async (ctx: any, args: any) => {
     const articles = await ctx.db
       .query("articles")
-      .withIndex("by_date", (q) => q.eq("date", args.date))
+      .withIndex("by_date", (q: any) => q.eq("date", args.date))
       .collect();
     return articles;
   },
@@ -102,10 +102,10 @@ export const getArticlesByDate = query({
 
 // Query to get unprocessed raw content
 export const getUnprocessedContent = query({
-  handler: async (ctx) => {
+  handler: async (ctx: any) => {
     const unprocessed = await ctx.db
       .query("rawContent")
-      .withIndex("by_processed", (q) => q.eq("processed", false))
+      .withIndex("by_processed", (q: any) => q.eq("processed", false))
       .collect();
     return unprocessed;
   },
@@ -114,10 +114,10 @@ export const getUnprocessedContent = query({
 // Query to get raw content by source
 export const getRawContentBySource = query({
   args: { source: v.string() },
-  handler: async (ctx, args) => {
+  handler: async (ctx: any, args: any) => {
     const content = await ctx.db
       .query("rawContent")
-      .withIndex("by_source", (q) => q.eq("source", args.source))
+      .withIndex("by_source", (q: any) => q.eq("source", args.source))
       .collect();
     return content;
   },
@@ -126,7 +126,7 @@ export const getRawContentBySource = query({
 // Mutation to mark raw content as processed
 export const markContentProcessed = mutation({
   args: { id: v.id("rawContent") },
-  handler: async (ctx, args) => {
+  handler: async (ctx: any, args: any) => {
     await ctx.db.patch(args.id, { processed: true });
     return args.id;
   },
@@ -134,7 +134,7 @@ export const markContentProcessed = mutation({
 
 // Query to get the latest episode
 export const getLatestEpisode = query({
-  handler: async (ctx) => {
+  handler: async (ctx: any) => {
     const episode = await ctx.db
       .query("episodes")
       .withIndex("by_created")
@@ -147,7 +147,7 @@ export const getLatestEpisode = query({
 // Query to get recent articles with optional limit
 export const getRecentArticles = query({
   args: { limit: v.optional(v.number()) },
-  handler: async (ctx, args) => {
+  handler: async (ctx: any, args: any) => {
     const query = ctx.db
       .query("articles")
       .withIndex("by_created")

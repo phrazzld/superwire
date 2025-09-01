@@ -349,5 +349,5 @@ export function extractLinks(html: string): string[] {
     }
   });
   
-  return [...new Set(links)]; // Remove duplicates
+  return Array.from(new Set(links)); // Remove duplicates
 }

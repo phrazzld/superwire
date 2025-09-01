@@ -21,7 +21,7 @@ async function testConvexConnection() {
 
   try {
     // Initialize Convex client
-    const client = new ConvexHttpClient(CONVEX_URL);
+    const client = new ConvexHttpClient(CONVEX_URL!);
 
     // Test data for article
     const testArticle = {
@@ -52,7 +52,7 @@ async function testConvexConnection() {
     console.log(`✅ Found ${articles.length} article(s) for today`);
 
     // Display the test article
-    const ourArticle = articles.find((a) => a.headline === testArticle.headline);
+    const ourArticle = articles.find((a: any) => a.headline === testArticle.headline);
     if (ourArticle) {
       console.log("\n📄 Test article details:");
       console.log(`  - Headline: ${ourArticle.headline}`);

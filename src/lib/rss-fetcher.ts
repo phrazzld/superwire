@@ -66,7 +66,7 @@ export async function fetchRSS(
         contentSnippet: item.contentSnippet || '',
         guid: item.guid || item.link || '',
         categories: item.categories || [],
-        author: item.creator || item.author || '',
+        author: (item as any).creator || (item as any).author || '',
       }));
 
       console.log(`✅ Successfully fetched ${items.length} items from ${url}`);

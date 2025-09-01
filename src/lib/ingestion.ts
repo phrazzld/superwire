@@ -119,7 +119,7 @@ async function scrapeArticleWithSource(
     // Use RSS content as fallback if available
     if (item.content || item.contentSnippet) {
       article.content = item.content || item.contentSnippet;
-      article.wordCount = article.content.split(/\s+/).length;
+      article.wordCount = article.content!.split(/\s+/).length;
     }
   }
   
@@ -168,8 +168,8 @@ export async function ingestDailyNews(
   // Collect all RSS items with source metadata
   const allRSSItems: Array<{ item: RSSItem; source: NewsSource }> = [];
   
-  for (const result of rssResults) {
-    const { source, items, error } = result;
+  for (const rssResult of rssResults) {
+    const { source, items, error } = rssResult;
     
     // Initialize source stats
     result.stats.sourceBreakdown[source.name] = {

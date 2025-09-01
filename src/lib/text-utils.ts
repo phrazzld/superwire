@@ -74,8 +74,8 @@ const HTML_ENTITIES: Record<string, string> = {
   '&hellip;': '…',
   '&ldquo;': '"',
   '&rdquo;': '"',
-  '&lsquo;': ''',
-  '&rsquo;': ''',
+  '&lsquo;': '\'',
+  '&rsquo;': '\'',
   '&bull;': '•',
   '&copy;': '©',
   '&reg;': '®',
@@ -262,10 +262,10 @@ export function extractMetadata(article: string): {
   }
   
   // Deduplicate all arrays
-  metadata.dates = [...new Set(metadata.dates)];
-  metadata.quotedSources = [...new Set(metadata.quotedSources)];
-  metadata.locations = [...new Set(metadata.locations)];
-  metadata.organizations = [...new Set(metadata.organizations)];
+  metadata.dates = Array.from(new Set(metadata.dates));
+  metadata.quotedSources = Array.from(new Set(metadata.quotedSources));
+  metadata.locations = Array.from(new Set(metadata.locations));
+  metadata.organizations = Array.from(new Set(metadata.organizations));
   
   // Limit numerical data to most relevant (first 10)
   metadata.numericalData = metadata.numericalData.slice(0, 10);
@@ -283,8 +283,8 @@ export function jaccardSimilarity(str1: string, str2: string): number {
   const set1 = new Set(str1.toLowerCase().split(/\s+/));
   const set2 = new Set(str2.toLowerCase().split(/\s+/));
   
-  const intersection = new Set([...set1].filter(x => set2.has(x)));
-  const union = new Set([...set1, ...set2]);
+  const intersection = new Set(Array.from(set1).filter(x => set2.has(x)));
+  const union = new Set(Array.from(set1).concat(Array.from(set2)));
   
   return union.size === 0 ? 0 : intersection.size / union.size;
 }

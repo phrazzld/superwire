@@ -5,7 +5,14 @@
 
 ### OpenRouter Integration
 - [x] Create `src/lib/openrouter.ts` with typed client wrapper using `fetch()` not SDK - include retry logic with exponential backoff (max 3 retries, 1s/2s/4s delays)
-- [ ] Add OpenRouter API key to `.env.local` as `OPENROUTER_API_KEY` and verify connection with test prompt to `openai/gpt-3.5-turbo`
+- [x] Add OpenRouter API key to `.env.local` as `OPENROUTER_API_KEY` and verify connection with test prompt to `openai/gpt-3.5-turbo`
+  ```
+  Work Log:
+  - Created .env.local and .env.example with all necessary environment variables
+  - Built verification script at scripts/verify-openrouter.ts
+  - Test succeeded - connection to OpenRouter verified with gpt-3.5-turbo
+  - Generated 100-word news summary in 2.5 seconds for $0.000225
+  ```
 - [ ] Implement `modelRouter()` function in `src/lib/openrouter.ts` that maps task types to specific models: `{classification: 'google/gemini-2.0-flash-thinking-exp:free', summary: 'anthropic/claude-3.5-sonnet', creative: 'openai/gpt-4o'}`
 - [ ] Write cost tracking function `trackTokenUsage()` that logs model, input tokens, output tokens, and calculated cost to `costs.json` after each API call
 - [ ] Create simple test script `scripts/test-openrouter.ts` that generates a 100-word news summary and validates response structure

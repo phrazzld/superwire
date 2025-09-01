@@ -163,6 +163,47 @@ export class OpenRouterClient {
 
     return response.choices[0]?.message?.content || '';
   }
+
+  /**
+   * Task-based completion using model router
+   * Automatically selects the optimal model based on task type
+   */
+  async completeTask(
+    taskType: TaskType,
+    prompt: string,
+    options?: {
+      systemPrompt?: string;
+      maxTokens?: number;
+      temperature?: number;
+      modelOverride?: string;
+    }
+  ): Promise<{ content: string; model: string; usage?: any }> {
+    const model = modelRouter(taskType, options?.modelOverride);
+    const maxTokens = options?.maxTokens || 1000;
+    const temperature = options?.temperature || 0.7;
+
+    console.log(`Executing ${taskType} task with model: ${model}`);
+
+    const messages: OpenRouterMessage[] = options?.systemPrompt
+      ? [
+          { role: 'system', content: options.systemPrompt },
+          { role: 'user', content: prompt }
+        ]
+      : [{ role: 'user', content: prompt }];
+
+    const response = await this.createChatCompletion({
+      model,
+      messages,
+      max_tokens: maxTokens,
+      temperature,
+    });
+
+    return {
+      content: response.choices[0]?.message?.content || '',
+      model,
+      usage: response.usage,
+    };
+  }
 }
 
 /**
@@ -187,8 +228,6 @@ export const MODEL_PRICING = {
   'openai/gpt-3.5-turbo': { input: 0.50, output: 1.50 },
   'anthropic/claude-3.5-sonnet': { input: 3.00, output: 15.00 },
   'anthropic/claude-3-haiku': { input: 0.25, output: 1.25 },
-  'google/gemini-2.0-flash-thinking-exp:free': { input: 0, output: 0 },
-  'google/gemini-2.0-flash-exp:free': { input: 0, output: 0 },
   'meta-llama/llama-3.1-70b-instruct': { input: 0.70, output: 0.80 },
 };
 
@@ -209,3 +248,114 @@ export function calculateCost(model: string, usage?: { prompt_tokens: number; co
   
   return inputCost + outputCost;
 }
+
+/**
+ * Task types for model routing
+ * Each task type has an optimal model based on cost/performance trade-offs
+ */
+export enum TaskType {
+  // Content processing tasks
+  CLASSIFICATION = 'classification',      // Categorizing articles, topics
+  EXTRACTION = 'extraction',              // Extracting facts, quotes, data
+  SUMMARIZATION = 'summarization',        // Creating article summaries
+  
+  // Creative generation tasks
+  CREATIVE_WRITING = 'creative',          // Op-eds, narrative content
+  SCRIPT_GENERATION = 'script',           // Podcast scripts
+  DIALOGUE_GENERATION = 'dialogue',       // Multi-host discussions
+  
+  // Analysis tasks
+  SENTIMENT_ANALYSIS = 'sentiment',       // Analyzing tone and mood
+  FACT_CHECKING = 'fact_checking',        // Verifying claims
+  EDITORIAL_ANALYSIS = 'editorial',       // Applying editorial perspective
+  
+  // Utility tasks
+  TRANSLATION = 'translation',            // Language translation
+  TITLE_GENERATION = 'title',             // Headlines and titles
+  SIMPLE_COMPLETION = 'simple',           // Basic completions
+}
+
+/**
+ * Model router configuration
+ * Maps task types to optimal models based on performance and cost
+ */
+export const MODEL_ROUTER: Record<TaskType, string> = {
+  // Use free/cheap models for high-volume, simple tasks
+  [TaskType.CLASSIFICATION]: 'openai/gpt-3.5-turbo',  // Fast and reliable for classification
+  [TaskType.EXTRACTION]: 'openai/gpt-3.5-turbo',      // Good at structured extraction
+  [TaskType.SENTIMENT_ANALYSIS]: 'openai/gpt-3.5-turbo',  // Adequate for sentiment
+  
+  // Use Claude for balanced quality/cost on analytical tasks
+  [TaskType.SUMMARIZATION]: 'anthropic/claude-3.5-sonnet',
+  [TaskType.EDITORIAL_ANALYSIS]: 'anthropic/claude-3.5-sonnet',
+  [TaskType.FACT_CHECKING]: 'anthropic/claude-3.5-sonnet',
+  
+  // Use GPT-4o for creative and complex generation
+  [TaskType.CREATIVE_WRITING]: 'openai/gpt-4o',
+  [TaskType.SCRIPT_GENERATION]: 'openai/gpt-4o',
+  [TaskType.DIALOGUE_GENERATION]: 'openai/gpt-4o',
+  
+  // Use appropriate models for utility tasks
+  [TaskType.TRANSLATION]: 'anthropic/claude-3-haiku',
+  [TaskType.TITLE_GENERATION]: 'openai/gpt-3.5-turbo',
+  [TaskType.SIMPLE_COMPLETION]: 'openai/gpt-3.5-turbo',
+};
+
+/**
+ * Model router function
+ * Returns the optimal model for a given task type
+ * 
+ * @param taskType - The type of task to perform
+ * @param override - Optional model override for testing or specific needs
+ * @returns The model identifier to use for the task
+ */
+export function modelRouter(taskType: TaskType, override?: string): string {
+  if (override) {
+    console.log(`Model override: Using ${override} instead of default for ${taskType}`);
+    return override;
+  }
+  
+  const model = MODEL_ROUTER[taskType];
+  if (!model) {
+    console.warn(`No model configured for task type: ${taskType}, falling back to gpt-3.5-turbo`);
+    return 'openai/gpt-3.5-turbo';
+  }
+  
+  return model;
+}
+
+/**
+ * Extended model information with capabilities
+ */
+export const MODEL_CAPABILITIES = {
+  'openai/gpt-3.5-turbo': {
+    maxTokens: 4096,
+    strengths: ['balanced', 'reliable', 'good general purpose', 'fast'],
+    weaknesses: ['not best at any specific task', 'can hallucinate'],
+  },
+  'openai/gpt-4o': {
+    maxTokens: 4096,
+    strengths: ['best creativity', 'excellent writing', 'complex reasoning'],
+    weaknesses: ['expensive', 'can be verbose'],
+  },
+  'openai/gpt-4o-mini': {
+    maxTokens: 16384,
+    strengths: ['affordable', 'good reasoning', 'larger context'],
+    weaknesses: ['not as creative as gpt-4o'],
+  },
+  'anthropic/claude-3.5-sonnet': {
+    maxTokens: 8192,
+    strengths: ['excellent analysis', 'nuanced understanding', 'factual accuracy'],
+    weaknesses: ['higher cost', 'sometimes overly cautious'],
+  },
+  'anthropic/claude-3-haiku': {
+    maxTokens: 4096,
+    strengths: ['fast', 'affordable', 'good for simple tasks'],
+    weaknesses: ['limited context', 'basic reasoning'],
+  },
+  'meta-llama/llama-3.1-70b-instruct': {
+    maxTokens: 8192,
+    strengths: ['open source heritage', 'good general purpose', 'affordable'],
+    weaknesses: ['less refined than commercial models'],
+  },
+};

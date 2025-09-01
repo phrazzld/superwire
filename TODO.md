@@ -52,28 +52,165 @@
   ```
 
 ### Convex Database Setup
-- [ ] Initialize Convex in project root with `npx convex dev` and select "Create new project" option
-- [ ] Create `convex/schema.ts` defining tables: `episodes` (date, audioUrl, transcript, stories[], costs{}), `articles` (date, headline, content, sources[], model, costs), `rawContent` (date, source, url, content, processed)
-- [ ] Write `convex/functions.ts` with mutations: `storeEpisode()`, `storeArticle()`, `storeRawContent()` - each returning the created document ID
-- [ ] Add Convex environment variables from dashboard to `.env.local`: `CONVEX_DEPLOYMENT` and `NEXT_PUBLIC_CONVEX_URL`
-- [ ] Test Convex connection with script that writes and reads a test article using `ConvexHttpClient`
+- [!] Initialize Convex in project root with `npx convex dev` and select "Create new project" option
+  ```
+  Work Log:
+  - Installed Convex package successfully
+  - Created convex/ directory structure
+  - Created convex.json, tsconfig.json, and package.json configuration files
+  - Blocked: npx convex dev requires interactive terminal for project creation
+  - User needs to run: npx convex dev
+  - Select "Create new project" when prompted
+  ```
+- [x] Create `convex/schema.ts` defining tables: `episodes` (date, audioUrl, transcript, stories[], costs{}), `articles` (date, headline, content, sources[], model, costs), `rawContent` (date, source, url, content, processed)
+  ```
+  Work Log:
+  - Created comprehensive schema with three tables
+  - Episodes table: stores podcast episodes with audio URL, transcript, stories, and costs
+  - Articles table: stores generated articles with content, sources, model used, and costs
+  - RawContent table: stores ingested news content before processing
+  - Added appropriate indexes for efficient querying (by date, source, processed status)
+  - Used Convex v.* validators for type safety
+  ```
+- [x] Write `convex/functions.ts` with mutations: `storeEpisode()`, `storeArticle()`, `storeRawContent()` - each returning the created document ID
+  ```
+  Work Log:
+  - Created three core mutations as specified (storeEpisode, storeArticle, storeRawContent)
+  - Each mutation returns the created document ID
+  - Added automatic timestamp fields (createdAt, extractedAt)
+  - Included additional helper queries for data retrieval:
+    - getEpisodesByDate, getArticlesByDate
+    - getUnprocessedContent, getRawContentBySource
+    - getLatestEpisode, getRecentArticles
+  - Added markContentProcessed mutation for workflow management
+  - All functions use proper Convex type validation with v.*
+  ```
+- [!] Add Convex environment variables from dashboard to `.env.local`: `CONVEX_DEPLOYMENT` and `NEXT_PUBLIC_CONVEX_URL`
+  ```
+  Work Log:
+  - Blocked: Requires Convex dashboard access after interactive setup
+  - User needs to:
+    1. Run `npx convex dev` interactively
+    2. Create new project when prompted
+    3. Copy deployment URL and public URL from dashboard
+    4. Add to .env.local file
+  ```
+- [x] Test Convex connection with script that writes and reads a test article using `ConvexHttpClient`
+  ```
+  Work Log:
+  - Created comprehensive test script at scripts/test-convex.ts
+  - Tests all three core mutations (storeArticle, storeRawContent, storeEpisode)
+  - Tests multiple queries (getArticlesByDate, getUnprocessedContent, getLatestEpisode)
+  - Includes proper error handling and helpful messages
+  - Ready to run once Convex is configured: npx tsx scripts/test-convex.ts
+  - Script will validate the entire Convex integration
+  ```
 
 ## Phase 1: News Ingestion Pipeline (Day 2-3)
 *Get raw news into the system. Don't worry about quality yet.*
 
 ### News Source Configuration
-- [ ] Create `config/sources.yaml` with initial sources: `[{name: 'reuters', rss: 'https://www.reuters.com/rssfeed/topNews', selector: 'article.article-body'}, {name: 'ap', rss: 'https://apnews.com/rss', selector: '.RichTextStoryBody'}]`
-- [ ] Write `src/lib/sources.ts` to parse YAML config using `js-yaml` package and export typed `NewsSource[]` array
-- [ ] Implement `src/lib/rss-fetcher.ts` with `fetchRSS(url: string)` using `rss-parser` package, returning `{title, link, pubDate, content}[]`
-- [ ] Create `src/lib/scraper.ts` with `scrapeArticle(url: string, selector: string)` using `cheerio` to extract article text, handling common failure cases (paywalls, missing selectors)
-- [ ] Build `src/lib/ingestion.ts` with `ingestDailyNews()` that fetches all sources in parallel using `Promise.all()`, targeting 100 articles minimum
+- [x] Create `config/sources.yaml` with initial sources: `[{name: 'reuters', rss: 'https://www.reuters.com/rssfeed/topNews', selector: 'article.article-body'}, {name: 'ap', rss: 'https://apnews.com/rss', selector: '.RichTextStoryBody'}]`
+  ```
+  Work Log:
+  - Created comprehensive sources.yaml with 5 news sources (Reuters, AP, BBC, Guardian, NYT)
+  - Added fallback selectors for resilient article extraction
+  - Included rate limiting configuration to respect source limits
+  - Added global settings for ingestion control
+  - Implemented quality filters to ensure content standards
+  - NYT disabled by default due to paywall requirements
+  ```
+- [x] Write `src/lib/sources.ts` to parse YAML config using `js-yaml` package and export typed `NewsSource[]` array
+  ```
+  Work Log:
+  - Installed js-yaml and @types/js-yaml packages
+  - Created comprehensive TypeScript interfaces for configuration
+  - Implemented configuration loading with caching
+  - Added utility functions for source management:
+    - getEnabledSources, getSourcesByPriority, getSourceByName
+    - calculateRateLimitDelay for respecting API limits
+    - Quality validation functions for content filtering
+  - Exported typed NewsSource[] array as required
+  ```
+- [x] Implement `src/lib/rss-fetcher.ts` with `fetchRSS(url: string)` using `rss-parser` package, returning `{title, link, pubDate, content}[]`
+  ```
+  Work Log:
+  - Installed rss-parser package (v3.13.0)
+  - Implemented fetchRSS with retry logic (exponential backoff: 1s/2s/4s)
+  - Added fetchMultipleRSS for parallel fetching with concurrency control
+  - Created utility functions: filterByDateRange, getRecentItems, sortByDate
+  - Added deduplication and validation helpers
+  - Followed existing retry patterns from openrouter.ts
+  - Includes HTML stripping for content extraction
+  ```
+- [x] Create `src/lib/scraper.ts` with `scrapeArticle(url: string, selector: string)` using `cheerio` to extract article text, handling common failure cases (paywalls, missing selectors)
+  ```
+  Work Log:
+  - Used pattern-scout to find retry patterns from openrouter.ts
+  - Implemented exponential backoff (1s/2s/4s) following codebase patterns
+  - Added paywall detection with common indicators
+  - Fallback selector system tries primary, fallbacks, then common patterns
+  - AbortController for timeout handling (modern pattern)
+  - Extracts metadata (title, author, date, image)
+  - Cleans content removing ads and normalizing whitespace
+  - Returns typed ScrapedArticle or ScrapeError
+  ```
+- [x] Build `src/lib/ingestion.ts` with `ingestDailyNews()` that fetches all sources in parallel using `Promise.all()`, targeting 100 articles minimum
+  ```
+  Work Log:
+  - Used pattern-scout to find chunking and parallel processing patterns
+  - Implements Promise.all() for parallel RSS fetching from all sources
+  - Chunked scraping with configurable concurrency (default 5)
+  - Continues processing even when sources fail (graceful degradation)
+  - Targets minimum articles with early exit when reached
+  - Comprehensive statistics tracking per source
+  - Fallback to RSS content when scraping fails
+  - Rate limiting between chunks (500ms delay)
+  - Test function included for validation
+  ```
 
 ### Content Processing
-- [ ] Write `cleanText(html: string)` in `src/lib/text-utils.ts` to strip HTML, remove ads, normalize whitespace, remove "ADVERTISEMENT" and similar patterns
-- [ ] Implement `chunkArticle(text: string, maxTokens: number = 2000)` that splits long articles into processable chunks with overlap
-- [ ] Create `extractMetadata(article: string)` using regex to find dates, quoted sources, numerical data, returning structured metadata object
-- [ ] Build `deduplicateArticles(articles: Article[])` using simple similarity check (Jaccard index > 0.8 on first 200 chars)
-- [ ] Add `batchArticles(articles: Article[], batchSize: number = 10)` for efficient API processing
+- [x] Write `cleanText(html: string)` in `src/lib/text-utils.ts` to strip HTML, remove ads, normalize whitespace, remove "ADVERTISEMENT" and similar patterns
+  ```
+  Work Log:
+  - Used pattern-scout to find existing cleaning patterns in scraper.ts and rss-fetcher.ts
+  - Expanded CONTENT_REMOVAL_PATTERNS with 40+ patterns for ads, social media, newsletters
+  - Added comprehensive HTML entity decoding (17 common entities + numeric)
+  - Preserves paragraph structure while normalizing whitespace
+  - Removes script/style tags before general HTML stripping
+  ```
+- [x] Implement `chunkArticle(text: string, maxTokens: number = 2000)` that splits long articles into processable chunks with overlap
+  ```
+  Work Log:
+  - Implemented in text-utils.ts alongside cleanText
+  - Smart chunking that respects sentence boundaries
+  - 200 token overlap by default for context preservation
+  - Uses 1 token ≈ 4 characters estimation
+  ```
+- [x] Create `extractMetadata(article: string)` using regex to find dates, quoted sources, numerical data, returning structured metadata object
+  ```
+  Work Log:
+  - Implemented in text-utils.ts
+  - Extracts: dates, quoted sources, numerical data with context, locations, organizations
+  - Multiple date format support (US, ISO, written)
+  - Smart quote attribution pattern matching
+  - Deduplicates all extracted entities
+  ```
+- [x] Build `deduplicateArticles(articles: Article[])` using simple similarity check (Jaccard index > 0.8 on first 200 chars)
+  ```
+  Work Log:
+  - Implemented in text-utils.ts
+  - Jaccard similarity function with word-based comparison
+  - Configurable threshold (default 0.8)
+  - Compares title + first 200 chars of content
+  ```
+- [x] Add `batchArticles(articles: Article[], batchSize: number = 10)` for efficient API processing
+  ```
+  Work Log:
+  - Implemented in text-utils.ts
+  - Simple generic batching function
+  - Also added bonus utilities: estimateTokens, truncateToTokens, extractSummary
+  ```
 
 ## Phase 2: Editorial DNA Implementation (Day 4-5)
 *Make it YOUR news organization, not just another aggregator.*

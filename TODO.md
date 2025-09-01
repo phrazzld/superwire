@@ -37,7 +37,19 @@
   - Created test script verifying all functionality
   - Added costs.json to .gitignore
   ```
-- [ ] Create simple test script `scripts/test-openrouter.ts` that generates a 100-word news summary and validates response structure
+- [x] Create simple test script `scripts/test-openrouter.ts` that generates a 100-word news summary and validates response structure
+  ```
+  Work Log:
+  - Created comprehensive test suite with 9 individual tests
+  - Tests news summary generation with 100-word target
+  - Validates response structure (content, model, usage, cost)
+  - Checks word count accuracy (allows 80-120 range)
+  - Verifies cost calculation matches expected values
+  - Tests content relevance and professional tone
+  - Uses color-coded output for clear test results
+  - All tests passed successfully on first run
+  - Generated professional renewable energy news summary
+  ```
 
 ### Convex Database Setup
 - [ ] Initialize Convex in project root with `npx convex dev` and select "Create new project" option

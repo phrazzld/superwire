@@ -36,6 +36,10 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# cost tracking
+costs.json
+costs.json.backup-*
+
 super-wire-firebase-adminsdk-hsukl-d30227eea4.json
 .vscode
 .tool-versions

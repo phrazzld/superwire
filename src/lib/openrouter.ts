@@ -4,6 +4,9 @@
  * Based on existing patterns from pages/api/episodes.ts
  */
 
+import * as fs from 'fs';
+import * as path from 'path';
+
 // Types for OpenRouter API
 export interface OpenRouterMessage {
   role: 'system' | 'user' | 'assistant';
@@ -73,7 +76,13 @@ export class OpenRouterClient {
    * Make a chat completion request to OpenRouter
    * Implements retry logic with exponential backoff following episodes.ts:101-127 pattern
    */
-  async createChatCompletion(request: OpenRouterRequest): Promise<OpenRouterResponse> {
+  async createChatCompletion(
+    request: OpenRouterRequest, 
+    options?: {
+      trackCosts?: boolean;
+      taskType?: string;
+    }
+  ): Promise<OpenRouterResponse> {
     let lastError: Error | null = null;
 
     for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
@@ -101,6 +110,20 @@ export class OpenRouterClient {
         
         if (!data.choices || data.choices.length === 0) {
           throw new Error('No response generated from OpenRouter');
+        }
+
+        // Track costs if enabled and usage data is available
+        const shouldTrack = options?.trackCosts !== false; // Default to true
+        if (shouldTrack && data.usage) {
+          await trackTokenUsage(
+            request.model,
+            data.usage.prompt_tokens,
+            data.usage.completion_tokens,
+            {
+              taskType: options?.taskType,
+              prompt: request.messages[request.messages.length - 1]?.content,
+            }
+          );
         }
 
         return data;
@@ -176,11 +199,13 @@ export class OpenRouterClient {
       maxTokens?: number;
       temperature?: number;
       modelOverride?: string;
+      trackCosts?: boolean;
     }
-  ): Promise<{ content: string; model: string; usage?: any }> {
+  ): Promise<{ content: string; model: string; usage?: any; cost?: number }> {
     const model = modelRouter(taskType, options?.modelOverride);
     const maxTokens = options?.maxTokens || 1000;
     const temperature = options?.temperature || 0.7;
+    const shouldTrackCosts = options?.trackCosts !== false; // Default to true
 
     console.log(`Executing ${taskType} task with model: ${model}`);
 
@@ -196,12 +221,19 @@ export class OpenRouterClient {
       messages,
       max_tokens: maxTokens,
       temperature,
+    }, {
+      trackCosts: shouldTrackCosts,
+      taskType,  // Pass taskType for better cost tracking context
     });
+
+    // Calculate cost for this request
+    const cost = response.usage ? calculateCost(model, response.usage) : 0;
 
     return {
       content: response.choices[0]?.message?.content || '',
       model,
       usage: response.usage,
+      cost,
     };
   }
 }
@@ -247,6 +279,131 @@ export function calculateCost(model: string, usage?: { prompt_tokens: number; co
   const outputCost = (usage.completion_tokens / 1_000_000) * pricing.output;
   
   return inputCost + outputCost;
+}
+
+/**
+ * Cost tracking entry structure
+ */
+export interface CostEntry {
+  timestamp: string;
+  model: string;
+  inputTokens: number;
+  outputTokens: number;
+  totalTokens: number;
+  cost: number;
+  taskType?: string;
+  prompt?: string;  // Optional: first 100 chars of prompt for debugging
+}
+
+/**
+ * Cost tracking data structure
+ */
+export interface CostTracking {
+  entries: CostEntry[];
+  dailyTotals: Record<string, number>;
+  modelTotals: Record<string, number>;
+  grandTotal: number;
+}
+
+/**
+ * Track token usage and costs to costs.json file
+ * Appends to existing data and updates running totals
+ */
+export async function trackTokenUsage(
+  model: string,
+  inputTokens: number,
+  outputTokens: number,
+  options?: {
+    taskType?: string;
+    prompt?: string;
+    costsFilePath?: string;
+  }
+): Promise<void> {
+  const costsPath = options?.costsFilePath || path.join(process.cwd(), 'costs.json');
+  
+  // Calculate cost for this request
+  const cost = calculateCost(model, {
+    prompt_tokens: inputTokens,
+    completion_tokens: outputTokens,
+  });
+
+  // Create new entry
+  const entry: CostEntry = {
+    timestamp: new Date().toISOString(),
+    model,
+    inputTokens,
+    outputTokens,
+    totalTokens: inputTokens + outputTokens,
+    cost,
+    taskType: options?.taskType,
+    prompt: options?.prompt?.substring(0, 100),  // Store first 100 chars for reference
+  };
+
+  // Load existing data or create new
+  let costData: CostTracking;
+  try {
+    const existingData = await fs.promises.readFile(costsPath, 'utf-8');
+    costData = JSON.parse(existingData);
+  } catch (error) {
+    // File doesn't exist or is invalid, create new structure
+    costData = {
+      entries: [],
+      dailyTotals: {},
+      modelTotals: {},
+      grandTotal: 0,
+    };
+  }
+
+  // Add new entry
+  costData.entries.push(entry);
+
+  // Update daily total
+  const today = new Date().toISOString().split('T')[0];
+  costData.dailyTotals[today] = (costData.dailyTotals[today] || 0) + cost;
+
+  // Update model total
+  costData.modelTotals[model] = (costData.modelTotals[model] || 0) + cost;
+
+  // Update grand total
+  costData.grandTotal += cost;
+
+  // Keep only last 1000 entries to prevent file from growing too large
+  if (costData.entries.length > 1000) {
+    costData.entries = costData.entries.slice(-1000);
+  }
+
+  // Write back to file
+  try {
+    await fs.promises.writeFile(
+      costsPath,
+      JSON.stringify(costData, null, 2),
+      'utf-8'
+    );
+    
+    // Log cost tracking (can be disabled in production)
+    console.log(`💰 Cost tracked: ${model} - $${cost.toFixed(6)} (${entry.totalTokens} tokens)`);
+    
+    // Warn if daily spend is high
+    if (costData.dailyTotals[today] > 5.0) {
+      console.warn(`⚠️ Daily spend is high: $${costData.dailyTotals[today].toFixed(2)}`);
+    }
+  } catch (error) {
+    console.error('Failed to write cost tracking data:', error);
+  }
+}
+
+/**
+ * Get cost summary from costs.json
+ */
+export async function getCostSummary(costsFilePath?: string): Promise<CostTracking | null> {
+  const costsPath = costsFilePath || path.join(process.cwd(), 'costs.json');
+  
+  try {
+    const data = await fs.promises.readFile(costsPath, 'utf-8');
+    return JSON.parse(data);
+  } catch (error) {
+    return null;
+  }
 }
 
 /**

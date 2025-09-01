@@ -24,7 +24,19 @@
   - Corrected invalid model IDs to use valid OpenRouter models
   - Added MODEL_CAPABILITIES for model comparison
   ```
-- [ ] Write cost tracking function `trackTokenUsage()` that logs model, input tokens, output tokens, and calculated cost to `costs.json` after each API call
+- [x] Write cost tracking function `trackTokenUsage()` that logs model, input tokens, output tokens, and calculated cost to `costs.json` after each API call
+  ```
+  Work Log:
+  - Created trackTokenUsage() function with comprehensive cost tracking
+  - Added CostEntry and CostTracking interfaces for type safety
+  - Integrated automatic tracking into createChatCompletion() method
+  - Enhanced completeTask() to track costs with task type context
+  - Added getCostSummary() for reading cost analytics
+  - Tracks daily totals, model totals, and grand total
+  - Warns when daily spend exceeds $5
+  - Created test script verifying all functionality
+  - Added costs.json to .gitignore
+  ```
 - [ ] Create simple test script `scripts/test-openrouter.ts` that generates a 100-word news summary and validates response structure
 
 ### Convex Database Setup

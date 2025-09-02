@@ -7,6 +7,7 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import { Configuration, OpenAIApi } from "openai";
 import path from "path";
 import { HOSTS, PROMPTS } from "../../constants";
+import { OpenRouterClient, TaskType } from "../../src/lib/openrouter";
 
 const credential = JSON.parse(
   Buffer.from(process.env.GOOGLE_SERVICE_KEY || "", "base64").toString()
@@ -98,26 +99,37 @@ const RETRY_DELAY = 5000;
 const writeIntroduction = async (headlines: any[]): Promise<string> => {
   console.log("Writing introduction...");
 
+  // Initialize OpenRouter client
+  const openRouterClient = new OpenRouterClient();
+  
   let retries = 0;
   let response;
 
   while (retries < MAX_RETRIES) {
     try {
       // TODO: Link the prompt host with the audio host to guarantee consistency
-      const prompt = PROMPTS.EP_INTRO.replace(
+      const basePrompt = PROMPTS.EP_INTRO.replace(
         "{HEADLINES}",
         headlines.join("\n")
       )
         .replace("{HOST_PERSONALITY}", HOSTS.ADAM.personality)
         .replace("{HOST_NAME}", HOSTS.ADAM.name);
-      const maxTokens = getMaxTokens(prompt);
-      // Generate episode intro
-      response = await openai.createCompletion({
-        model: "text-davinci-003",
-        temperature: 0.7,
-        max_tokens: maxTokens,
-        prompt: prompt,
-      });
+      
+      // Convert to modern chat completion format
+      const systemPrompt = `You are ${HOSTS.ADAM.name}, an expert podcast host with the following personality: ${HOSTS.ADAM.personality}. You are writing the introduction segment for the Super Wire podcast.`;
+      const userPrompt = basePrompt;
+      
+      // Use OpenRouter with GPT-4o for script generation
+      response = await openRouterClient.completeTask(
+        TaskType.SCRIPT_GENERATION, // Routes to GPT-4o
+        userPrompt,
+        {
+          systemPrompt,
+          temperature: 0.7,
+          maxTokens: 500, // Reasonable limit for podcast intro
+          trackCosts: true
+        }
+      );
       break;
     } catch (error: any) {
       console.error(`Error writing intro: ${error.message}`);
@@ -130,15 +142,16 @@ const writeIntroduction = async (headlines: any[]): Promise<string> => {
     throw new Error(`Failed to write intro after ${MAX_RETRIES} retries`);
   }
 
-  if (
-    !response ||
-    !response.data.choices ||
-    response.data.choices.length === 0
-  ) {
+  if (!response || !response.content) {
     throw new Error("No intro generated");
   }
 
-  return response.data.choices[0].text || "";
+  // Log cost information for monitoring
+  if (response.cost) {
+    console.log(`Introduction generation cost: $${response.cost.toFixed(4)} using ${response.model}`);
+  }
+
+  return response.content;
 };
 
 type Host = {
@@ -147,30 +160,149 @@ type Host = {
   personality: string;
 };
 
-const writeSegment = async (content: string, host: Host): Promise<string> => {
+interface SegmentOptions {
+  includeHistoricalContext?: boolean;
+  includePredictions?: boolean;
+  targetLength?: number;
+}
+
+/**
+ * Build enhanced system prompt for segment generation with host personality and capabilities
+ */
+const buildSegmentSystemPrompt = (
+  host: Host,
+  includeHistoricalContext: boolean,
+  includePredictions: boolean,
+  targetLength: number
+): string => {
+  let systemPrompt = `You are ${host.name}, an expert podcast host with the following personality: ${host.personality}.
+
+You are creating a news segment for the Super Wire podcast that provides thoughtful, engaging analysis of current events.
+
+SEGMENT REQUIREMENTS:
+- Target length: ${targetLength} words
+- Professional yet conversational tone matching your personality
+- Focus on why this story matters to listeners
+- Provide clear, accessible explanations of complex topics
+- Maintain journalistic integrity while offering insights`;
+
+  if (includeHistoricalContext) {
+    systemPrompt += `
+- Include relevant historical context and parallels to similar past events
+- Draw connections between current developments and historical precedents
+- Help listeners understand patterns and recurring themes`;
+  }
+
+  if (includePredictions) {
+    systemPrompt += `
+- Offer thoughtful analysis of likely future implications
+- Discuss potential outcomes and what to watch for next
+- Provide expert perspective on where this story might lead`;
+  }
+
+  systemPrompt += `
+
+SEGMENT STRUCTURE:
+1. Hook: Engaging opening that captures the essence of the story
+2. Context: Essential background information listeners need
+3. Analysis: Your insights on why this matters and what it means`;
+
+  if (includeHistoricalContext) {
+    systemPrompt += `
+4. Historical Perspective: Relevant parallels and lessons from the past`;
+  }
+
+  if (includePredictions) {
+    systemPrompt += `
+${includeHistoricalContext ? '5' : '4'}. Future Outlook: What this could mean going forward`;
+  }
+
+  systemPrompt += `
+${(includeHistoricalContext && includePredictions) ? '6' : 
+    (includeHistoricalContext || includePredictions) ? '5' : '4'}. Conclusion: Why listeners should care and key takeaways
+
+Write in your distinctive voice and style, making complex topics accessible while maintaining depth and credibility.`;
+
+  return systemPrompt;
+};
+
+/**
+ * Build enhanced user prompt with story content and enhancement instructions
+ */
+const buildSegmentUserPrompt = (
+  content: string,
+  includeHistoricalContext: boolean,
+  includePredictions: boolean
+): string => {
+  let userPrompt = `Create an engaging podcast segment based on the following news story:
+
+STORY CONTENT:
+"""
+${content}
+"""
+
+Your task is to transform this raw news content into a compelling podcast segment that:
+- Explains the story clearly and engagingly
+- Provides your expert analysis and perspective
+- Helps listeners understand why this matters`;
+
+  if (includeHistoricalContext) {
+    userPrompt += `
+- Draws relevant historical parallels and context
+- Shows how this fits into broader historical patterns`;
+  }
+
+  if (includePredictions) {
+    userPrompt += `
+- Analyzes potential future implications and outcomes
+- Discusses what to watch for as this story develops`;
+  }
+
+  userPrompt += `
+
+Remember to write in your distinctive hosting style and make the content accessible to a general audience while maintaining analytical depth.`;
+
+  return userPrompt;
+};
+
+const writeSegment = async (
+  content: string, 
+  host: Host, 
+  options: SegmentOptions = {}
+): Promise<string> => {
   console.log("Writing segment...");
 
+  const {
+    includeHistoricalContext = false,
+    includePredictions = false,
+    targetLength = 800
+  } = options;
+
+  // Initialize OpenRouter client
+  const openRouterClient = new OpenRouterClient();
+  
   let retries = 0;
   let response;
 
   while (retries < MAX_RETRIES) {
     try {
-      const prompt = PROMPTS.EP_SEGMENT.replace("{STORY}", content)
-        .replace("{HOST_PERSONALITY}", host.personality)
-        .replace("{HOST_NAME}", host.name);
-      const maxTokens = getMaxTokens(prompt);
+      // Build enhanced system prompt with host personality
+      const systemPrompt = buildSegmentSystemPrompt(host, includeHistoricalContext, includePredictions, targetLength);
+      
+      // Build enhanced user prompt with story content
+      const userPrompt = buildSegmentUserPrompt(content, includeHistoricalContext, includePredictions);
 
-      if (maxTokens < 100) {
-        console.warn("Content too long for segment");
-        return "";
-      }
-
-      response = await openai.createCompletion({
-        model: "text-davinci-003",
-        temperature: 0.7,
-        max_tokens: maxTokens,
-        prompt: prompt,
-      });
+      // Use OpenRouter with GPT-4o for enhanced script generation
+      response = await openRouterClient.completeTask(
+        TaskType.SCRIPT_GENERATION, // Routes to GPT-4o
+        userPrompt,
+        {
+          systemPrompt,
+          temperature: 0.7,
+          maxTokens: Math.min(targetLength * 1.5, 1200), // Allow for richer content
+          trackCosts: true
+        }
+      );
       break;
     } catch (error: any) {
       console.error(`Error writing segment: ${error.message}`);
@@ -184,15 +316,189 @@ const writeSegment = async (content: string, host: Host): Promise<string> => {
     throw new Error(`Failed to write segment after ${MAX_RETRIES} retries`);
   }
 
-  if (
-    !response ||
-    !response.data.choices ||
-    response.data.choices.length === 0
-  ) {
-    throw new Error("No intro generated");
+  if (!response || !response.content) {
+    throw new Error("No segment generated");
   }
 
-  return response.data.choices[0].text || "";
+  // Log cost information for monitoring
+  if (response.cost) {
+    console.log(`Segment generation cost: $${response.cost.toFixed(4)} using ${response.model}`);
+  }
+
+  return response.content;
+};
+
+/**
+ * Generate smooth transitions between podcast segments for better flow
+ */
+const generateTransitions = async (
+  segments: string[],
+  stories: any[],
+  hosts: Host[]
+): Promise<string[]> => {
+  console.log("Generating transitions...");
+
+  if (segments.length <= 1) {
+    return []; // No transitions needed for single segment
+  }
+
+  const openRouterClient = new OpenRouterClient();
+  const transitions: string[] = [];
+
+  // Generate transitions between consecutive segments
+  for (let i = 0; i < segments.length - 1; i++) {
+    let retries = 0;
+    let response;
+
+    // Determine hosts for current and next segments
+    const currentHost = hosts[i % hosts.length];
+    const nextHost = hosts[(i + 1) % hosts.length];
+    
+    // Use the next segment's host for the transition (they're introducing their segment)
+    const transitionHost = nextHost;
+
+    while (retries < MAX_RETRIES) {
+      try {
+        // Build system prompt for transition generation
+        const systemPrompt = buildTransitionSystemPrompt(transitionHost, currentHost, nextHost);
+        
+        // Build user prompt with segment context
+        const userPrompt = buildTransitionUserPrompt(
+          segments[i],
+          segments[i + 1], 
+          stories[i],
+          stories[i + 1],
+          currentHost,
+          nextHost
+        );
+
+        response = await openRouterClient.completeTask(
+          TaskType.SCRIPT_GENERATION, // Routes to GPT-4o
+          userPrompt,
+          {
+            systemPrompt,
+            temperature: 0.6, // Slightly lower for smoother transitions
+            maxTokens: 200, // Transitions should be concise
+            trackCosts: true
+          }
+        );
+        break;
+      } catch (error: any) {
+        console.error(`Error generating transition ${i}: ${error.message}`);
+        retries++;
+        await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY));
+      }
+    }
+
+    if (retries === MAX_RETRIES) {
+      console.warn(`Failed to generate transition ${i}, using fallback`);
+      transitions.push(generateFallbackTransition(transitionHost, stories[i], stories[i + 1]));
+    } else if (!response || !response.content) {
+      console.warn(`No transition generated for ${i}, using fallback`);  
+      transitions.push(generateFallbackTransition(transitionHost, stories[i], stories[i + 1]));
+    } else {
+      // Log cost information
+      if (response.cost) {
+        console.log(`Transition ${i} cost: $${response.cost.toFixed(4)} using ${response.model}`);
+      }
+      transitions.push(response.content);
+    }
+  }
+
+  console.log(`Generated ${transitions.length} transitions`);
+  return transitions;
+};
+
+/**
+ * Build system prompt for transition generation with host personality
+ */
+const buildTransitionSystemPrompt = (
+  transitionHost: Host,
+  currentHost: Host, 
+  nextHost: Host
+): string => {
+  const transitionPhrases = transitionHost.personality.includes('energetic') 
+    ? ['Building on that', 'Speaking of which', 'This connects to'] // Jordan-style
+    : transitionHost.personality.includes('empathetic')
+    ? ['What this means for people is', 'The human side of this', 'Looking at the impact'] // Dallas-style  
+    : ['The data shows', 'What\'s particularly interesting', 'Let me break this down']; // Adam-style
+
+  return `You are ${transitionHost.name}, a podcast host with this personality: ${transitionHost.personality}.
+
+You are creating a smooth transition between two news segments in the Super Wire podcast. Your job is to bridge from the conclusion of ${currentHost.name}'s segment to naturally introduce ${nextHost.name}'s upcoming segment.
+
+TRANSITION REQUIREMENTS:
+- Length: 30-50 words (10-15 seconds when spoken)
+- Acknowledge the previous segment briefly
+- Create natural bridge to the next topic
+- Use your distinctive voice and style
+- Include one of your signature transition phrases: ${transitionPhrases.join(', ')}
+- Maintain professional yet conversational tone
+- Create thematic connection between different stories when possible
+
+TRANSITION STYLE:
+- Concise and purposeful - every word counts
+- Natural conversational flow
+- Professional broadcast quality
+- Host personality should come through clearly
+- Should feel spontaneous, not scripted
+
+Generate ONLY the transition text - no introductory phrases or explanations.`;
+};
+
+/**
+ * Build user prompt for transition generation with story context
+ */
+const buildTransitionUserPrompt = (
+  currentSegment: string,
+  nextSegment: string,
+  currentStory: any,
+  nextStory: any,
+  currentHost: Host,
+  nextHost: Host
+): string => {
+  // Extract key themes from segments (first 200 chars of each for context)
+  const currentTheme = currentSegment.substring(0, 200) + '...';
+  const nextTheme = nextSegment.substring(0, 200) + '...';
+
+  return `Create a smooth transition from ${currentHost.name}'s segment to ${nextHost.name}'s segment.
+
+CURRENT SEGMENT CONCLUSION (${currentHost.name}):
+"${currentTheme}"
+
+NEXT SEGMENT OPENING (${nextHost.name}):  
+"${nextTheme}"
+
+STORY CONTEXT:
+- Current story: "${currentStory.title || 'Current topic'}"
+- Next story: "${nextStory.title || 'Next topic'}"
+
+Your task is to create a natural bridge that:
+1. Briefly acknowledges the current segment's key point
+2. Creates a logical connection to the next topic
+3. Smoothly hands off to ${nextHost.name}
+4. Uses your distinctive hosting style
+
+Generate a concise transition (30-50 words) that makes the flow feel seamless and professional.`;
+};
+
+/**
+ * Generate fallback transition if AI generation fails
+ */
+const generateFallbackTransition = (
+  host: Host,
+  currentStory: any,
+  nextStory: any
+): string => {
+  const transitions = [
+    `And speaking of change, let's look at another development that's been making waves.`,
+    `That's not the only story shaping our world today. Let's turn to another important development.`,
+    `This connects to a broader pattern we're seeing. Here's another piece of the puzzle.`,
+    `While we're on this topic, there's another angle worth exploring.`,
+    `And that brings us to our next story, which adds another dimension to what we're seeing.`
+  ];
+  
+  return transitions[Math.floor(Math.random() * transitions.length)];
 };
 
 const writeConclusion = async (headlines: any[]): Promise<string> => {
@@ -256,17 +562,26 @@ const writeEpisode = async (stories: any[]): Promise<Episode> => {
 
   let segments = [];
 
-  // for of with index
+  // Generate segments with enhanced narratives - enhanced with historical context and predictions
+  let hosts = [];
   for (let i = 0; i < stories.length; i++) {
     const host = i % 2 === 0 ? HOSTS.DALLAS : HOSTS.JORDAN;
-    const segment = await writeSegment(stories[i].content, host);
+    hosts.push(host);
+    const segment = await writeSegment(stories[i].content, host, {
+      includeHistoricalContext: true,
+      includePredictions: true,
+      targetLength: 800 // Richer narratives with more content
+    });
     segments.push(segment);
   }
 
-  // TODO: Smoother transitions between segments
+  // Generate smooth transitions between segments
+  const transitions = await generateTransitions(segments, stories, hosts);
+  console.log(`Generated ${transitions.length} transitions for smoother flow`);
+
   const conclusion = await writeConclusion(headlines);
 
-  const episode = { intro, segments, conclusion };
+  const episode = { intro, segments, transitions, conclusion };
   console.log(episode);
 
   return episode;

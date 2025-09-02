@@ -22,6 +22,19 @@ export interface IngestedArticle {
   scrapedAt?: Date;
   scrapeError?: string;
   isPaywalled?: boolean;
+  ingestionDate?: Date;
+  
+  // Editorial processing
+  editorialAngle?: string | { primary: string; secondary: string; avoid: string };
+  editorialPerspective?: string | string[];
+  
+  // Additional metadata
+  metadata?: {
+    publishedAt?: Date;
+    author?: string;
+    readingTime?: number;
+    [key: string]: any;
+  };
 }
 
 export interface IngestionResult {

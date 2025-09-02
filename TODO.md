@@ -216,48 +216,376 @@
 *Make it YOUR news organization, not just another aggregator.*
 
 ### Editorial Configuration
-- [ ] Create `config/editorial.yaml` with values, priorities (0-10 scale), perspectives to seek/avoid based on TASK.md specification
-- [ ] Implement `src/lib/editorial.ts` with `loadEditorialDNA()` parsing YAML into typed configuration object
-- [ ] Write `calculateStoryImportance(story, editorialDNA)` implementing the scoring algorithm from TASK.md (value alignment * 3, topic relevance * 2.5, etc.)
-- [ ] Create `applyEditorialFilter(stories, editorialDNA)` that scores, filters, and ranks stories by importance score
-- [ ] Build `injectEditorialAngle(story, editorialDNA)` that adds perspective framing based on editorial values
+- [x] Create `config/editorial.yaml` with values, priorities (0-10 scale), perspectives to seek/avoid based on TASK.md specification
+  ```
+  Work Log:
+  - Used pattern-scout to find YAML configuration patterns from sources.yaml
+  - Implemented full editorial DNA from TASK.md specification
+  - Added importance scoring weights (value_alignment: 3.0, topic_relevance: 2.5, etc.)
+  - Included narrative tone configuration with topic-specific variations
+  - Added editorial angles for different story types
+  - Extended with source credibility weights and special coverage rules
+  - Added thresholds, timing, and experimental features
+  ```
+- [x] Implement `src/lib/editorial.ts` with `loadEditorialDNA()` parsing YAML into typed configuration object
+  ```
+  Work Log:
+  - Used pattern-scout to find YAML loading patterns from sources.ts
+  - Created comprehensive TypeScript interfaces for editorial configuration
+  - Implemented loadEditorialDNA() with caching and error handling
+  - Added calculateStoryImportance() with all scoring components
+  - Implemented applyEditorialFilter() for story ranking and filtering
+  - Added injectEditorialAngle() for perspective framing
+  - Included special rules checks (always/never cover, requires verification)
+  - Created utility functions for accessing configuration sections
+  ```
+- [x] Write `calculateStoryImportance(story, editorialDNA)` implementing the scoring algorithm from TASK.md (value alignment * 3, topic relevance * 2.5, etc.)
+  ```
+  Work Log:
+  - Implemented in editorial.ts alongside loadEditorialDNA()
+  - All scoring components: valueAlignment, topicRelevance, futureImpact, novelty, systemic, actionability
+  - Includes penalties for clickbait, redundancy, triviality
+  - Uses importance weights from configuration
+  ```
+- [x] Create `applyEditorialFilter(stories, editorialDNA)` that scores, filters, and ranks stories by importance score
+  ```
+  Work Log:
+  - Implemented in editorial.ts
+  - Scores all stories using calculateStoryImportance()
+  - Filters by minimum_importance_score threshold
+  - Sorts by score and limits to maximum_daily_stories
+  - Returns filtered array with editorialScore attached
+  ```
+- [x] Build `injectEditorialAngle(story, editorialDNA)` that adds perspective framing based on editorial values
+  ```
+  Work Log:
+  - Implemented in editorial.ts
+  - Automatically detects story type from content
+  - Maps to appropriate editorial angle (primary, secondary, avoid)
+  - Adds editorial perspectives from seek list
+  - Returns enhanced story with angle and perspective
+  ```
 
 ### Host Personality System
-- [ ] Migrate existing host configs from `constants.ts` to `config/hosts.yaml` with expanded personality traits
-- [ ] Implement `selectHostForStory(story, hosts)` that matches story type to appropriate host personality
-- [ ] Write `generateHostDialogue(story, host1, host2)` prompt that creates back-and-forth discussion between hosts
-- [ ] Create `maintainHostConsistency(text, host)` that validates generated text matches host personality traits
-- [ ] Add `rotateHosts(stories, hosts)` to ensure balanced host participation across episode
+- [x] Migrate existing host configs from `constants.ts` to `config/hosts.yaml` with expanded personality traits
+  ```
+  Work Log:
+  - Created comprehensive hosts.yaml with all three hosts (Adam, Dallas, Jordan)
+  - Expanded from simple personality strings to structured traits:
+    - 10-point scales for traits (analytical_depth, empathy_level, energy_level, etc.)
+    - Topic interests with priorities (0-10)
+    - Speech patterns and transition phrases
+    - Interaction styles between hosts
+  - Added host rotation rules and pairing preferences
+  - Included voice synthesis settings for ElevenLabs
+  - Added segment assignment logic by content type
+  - Included consistency checks and experimental features
+  ```
+- [x] Implement `selectHostForStory(story, hosts)` that matches story type to appropriate host personality
+  ```
+  Work Log:
+  - Created comprehensive src/lib/hosts.ts following established patterns from sources.ts and editorial.ts
+  - Implemented YAML configuration loading with caching for hosts.yaml
+  - Created detailed TypeScript interfaces for Host, HostCharacteristics, SpeechPatterns
+  - Implemented detectStoryType() using keyword matching patterns from editorial.ts
+  - Built calculateHostTopicScore() using topic-to-keywords mapping (20+ topics)
+  - Added calculatePersonalityScore() for story-type to personality compatibility
+  - Implemented shouldHostAvoid() to respect host avoids lists
+  - Created selectHostForStory() with weighted scoring (70% topic interest, 30% personality)
+  - Added selectHostsForStory() for multi-host segments
+  - Included getHostPairingPreference() for host interaction optimization
+  - Fallback logic selects most versatile host when no good matches found
+  ```
+- [x] Write `generateHostDialogue(story, host1, host2)` prompt that creates back-and-forth discussion between hosts
+  ```
+  Work Log:
+  - Created comprehensive generateHostDialogue() function in src/lib/hosts.ts
+  - Uses OpenRouter client with TaskType.DIALOGUE_GENERATION (GPT-4o model)
+  - Built structured system prompt incorporating both host personalities:
+    - Detailed characteristics (analytical depth, empathy, energy levels)
+    - Speech patterns (pace, vocabulary, transition phrases)  
+    - Interaction dynamics from host pairing preferences
+  - Extracts story content and creates focused discussion prompts
+  - Generates 200-300 word natural dialogue with 3-4 exchanges per host
+  - Includes robust error handling with personality-aware fallback dialogue
+  - Returns HostDialogue interface with metadata (word count, interaction type)
+  - Added bonus function generateHostDialogueForStoryType() with auto host selection
+  - Follows modern message array pattern vs legacy template replacement
+  ```
+- [x] Create `maintainHostConsistency(text, host)` that validates generated text matches host personality traits
+  ```
+  Work Log:
+  - Created comprehensive maintainHostConsistency() function with 360+ lines in src/lib/hosts.ts
+  - Implemented 7 personality analysis areas:
+    - Vocabulary style consistency (precise/accessible/contemporary patterns)
+    - Speech pace alignment (rapid_fire/measured/conversational)
+    - Transition phrase usage detection (exact and partial matches)
+    - Analytical depth assessment (density-based analysis)
+    - Empathy level evaluation (empathy indicator patterns)
+    - Energy level analysis (punctuation, sentence length, energy words)
+    - Topic focus alignment (primary focus + high-interest topics)
+  - Built HostConsistencyResult interface with detailed feedback
+  - Uses weighted scoring system (analytical_depth: 2.0, empathy: 1.8, vocabulary: 1.5)
+  - Follows editorial.ts patterns for multi-factor scoring and thresholds
+  - Provides actionable recommendations for personality alignment improvements
+  - Includes robust error handling for empty/invalid text
+  - Returns overall consistency score with 6.0 threshold (following editorial patterns)
+  ```
+- [x] Add `rotateHosts(stories, hosts)` to ensure balanced host participation across episode
+  ```
+  Work Log:
+  - Created comprehensive rotateHosts() function with 370+ lines in src/lib/hosts.ts
+  - Implemented sophisticated host assignment algorithm:
+    - Uses existing selectHostsForStory() for topic/personality matching
+    - Applies rotation_rules from hosts.yaml (min/max participation, variety threshold)
+    - Tracks participation percentages and enforces balance requirements
+    - Includes variety scoring to prevent repetitive host usage
+  - Built selectOptimalHostForRotation() with multi-factor scoring:
+    - Boosts underused hosts (+3.0), penalizes overused hosts (-2.0)
+    - Enforces variety threshold with spacing bonuses/penalties
+    - Hard blocks hosts exceeding maximum participation
+  - Added rebalanceParticipation() for post-assignment optimization
+  - Created comprehensive interfaces: HostAssignment, RotationStats
+  - Included calculateRotationStats() for episode quality assessment
+  - Added generateEpisodeStructure() wrapper with recommendations
+  - Replaces simple alternation (i % 2) with intelligent rotation system
+  ```
 
 ## Phase 3: Content Generation Pipeline (Day 6-8)
 *Transform filtered news into actual content. Start with cheapest format first.*
 
 ### Article Generation (Cheapest - $0.10/day)
-- [ ] Create `src/generators/article.ts` with `generateArticle(story, editorialDNA)` using Gemini-2.5-flash for cost efficiency
-- [ ] Write article prompt template in `prompts/article.txt` with placeholders for facts, angle, and target length (500-800 words)
-- [ ] Implement `validateArticle(text)` checking minimum length, no placeholder text, coherent structure
-- [ ] Add `enhanceWithContext(article, relatedStories)` that adds "Related:" section with 2-3 connected stories
-- [ ] Store generated articles in Convex with `await ctx.db.insert('articles', {...})` including generation costs
+- [x] Create `src/generators/article.ts` with `generateArticle(story, editorialDNA)` using Gemini-2.5-flash for cost efficiency
+  ```
+  Work Log:
+  - Created comprehensive src/generators/article.ts with 350+ lines
+  - Implemented generateArticle() function using cost-efficient Gemini model
+  - Added ARTICLE_GENERATION task type to OpenRouter configuration
+  - Built sophisticated system prompts incorporating editorial DNA values and perspectives
+  - Created structured response parsing (TITLE/EXCERPT/ARTICLE format)
+  - Implemented comprehensive quality scoring based on:
+    - Length adherence (±50 words ideal), structure quality, analytical depth
+    - Placeholder detection, paragraph structure validation
+  - Added robust error handling with intelligent fallback article generation
+  - Included generateArticlesBatch() for efficient bulk processing
+  - Integrated with existing editorial system (loadEditorialDNA, injectEditorialAngle)
+  - Uses google/gemini-2.0-flash-thinking-exp:free for maximum cost efficiency
+  - Returns detailed GeneratedArticle interface with metadata and quality metrics
+  ```
+- [x] Write article prompt template in `prompts/article.txt` with placeholders for facts, angle, and target length (500-800 words)
+  ```
+  Work Log:
+  - Created prompts/ directory and comprehensive article.txt template
+  - Followed existing {VARIABLE} placeholder pattern from constants.ts
+  - Included all major editorial DNA integration placeholders:
+    - {EDITORIAL_VALUES}, {PERSPECTIVES_TO_SEEK}, {PERSPECTIVES_TO_AVOID}
+    - {SOURCE_NAME}, {ORIGINAL_TITLE}, {SOURCE_CONTENT}
+    - {EDITORIAL_ANGLE_SECTION}, {EDITORIAL_PERSPECTIVES_SECTION}
+    - {TARGET_LENGTH} for 500-800 word requirement
+    - {FOCUS_AREAS_SECTION} for specific emphasis areas
+  - Maintained structured TITLE:/EXCERPT:/ARTICLE: format for parsing compatibility
+  - Created comprehensive writing guidelines for journalistic quality
+  - Template supports both file-based and programmatic prompt generation approaches
+  ```
+- [x] Implement `validateArticle(text)` checking minimum length, no placeholder text, coherent structure
+  ```
+  Work Log:
+  - Created comprehensive validateArticle() function with 240+ lines in src/generators/article.ts
+  - Implemented 4 core validation checks:
+    - Length validation (configurable minimum, default 200 words)
+    - Placeholder detection (12+ patterns: [placeholder], {placeholder}, TODO, TBD, Lorem ipsum, XXX, etc.)
+    - Structure validation (paragraph count, title presence, content substance)
+    - Coherence checking (sentence count, average length, readability metrics)
+  - Built ArticleValidationResult interface following codebase patterns:
+    - Detailed validation breakdown with individual scores
+    - Issues vs warnings distinction for actionable feedback
+    - Comprehensive recommendations array
+  - Used weighted scoring system (length: 3.0, structure: 2.5, placeholders: 2.0, coherence: 1.5)
+  - Added configurable options (minimumLength, strictMode, checkPlaceholders)
+  - Included bonus quickValidateArticle() for simple pass/fail checks
+  - Follows established validation patterns from hosts.ts and editorial.ts
+  ```
+- [x] Add `enhanceWithContext(article, relatedStories)` that adds "Related:" section with 2-3 connected stories
+  ```
+  Work Log:
+  - Created comprehensive enhanceWithContext() function with 260+ lines in src/generators/article.ts
+  - Implemented sophisticated story relationship detection:
+    - Uses existing Jaccard similarity algorithm from text-utils.ts
+    - Integrates topic relevance scoring from editorial.ts
+    - Combined scoring: 60% content similarity + 40% topic relevance
+    - Configurable similarity thresholds (default 0.15 for related, >0.7 filtered as duplicates)
+  - Built comprehensive interfaces: RelatedStoryMatch, EnhancedArticle
+  - Added professional markdown formatting for "Related Stories" section
+  - Implemented duplicate avoidance and intelligent story filtering
+  - Created bonus functions:
+    - findRelatedFromSameSource() for source-specific context
+    - enhanceArticlesBatch() for efficient bulk processing
+  - Configurable options: maxRelatedStories, similarity thresholds, topic relevance
+  - Returns detailed match scoring with reasons for transparency
+  ```
+- [x] Store generated articles in Convex with `await ctx.db.insert('articles', {...})` including generation costs
+  ```
+  Work Log:
+  - Added Convex imports and environment variable loading to src/generators/article.ts
+  - Created storeArticleInConvex() function transforming GeneratedArticle to Convex schema format
+  - Implemented extractSourcesFromStory() to handle source information extraction
+  - Added createTagsFromArticle() for automatic tag generation (editorial angles, quality, length)
+  - Added storeInConvex option to ArticleGenerationOptions for automatic storage
+  - Updated generateArticle() to optionally store articles after generation
+  - Created comprehensive test script at scripts/test-article-storage.ts
+  - Handles cost tracking, source extraction, tag generation with proper error handling
+  ```
 
 ### Op-Ed Generation ($0.50/day)
-- [ ] Create `src/generators/oped.ts` with `generateOpEd(stories, host, editorialDNA)` using GPT-4o for creative synthesis
-- [ ] Design op-ed prompt in `prompts/oped.txt` emphasizing strong thesis, supporting arguments, call-to-action
-- [ ] Implement `selectOpEdTopics(stories, limit=2)` choosing most controversial/important topics for op-eds
-- [ ] Write `validateOpEd(text)` ensuring clear position, supporting evidence, conclusion
-- [ ] Add cost tracking specifically for op-eds given higher model costs
+- [x] Create `src/generators/oped.ts` with `generateOpEd(stories, host, editorialDNA)` using GPT-4o for creative synthesis
+  ```
+  Work Log:
+  - Used pattern-scout to analyze existing generator patterns from src/generators/article.ts
+  - Created GeneratedOpEd interface with thesis, hostPersonality, opinionType fields
+  - Implemented generateOpEd() using TaskType.CREATIVE_WRITING (GPT-4o) for creative synthesis
+  - Built synthesizeStories() function to handle multiple source stories vs single story
+  - Added strong host personality integration in system prompts (analytical depth, empathy, voice)
+  - Implemented opinion-specific quality scoring (thesis clarity, source synthesis, voice strength)
+  - Created extractThesis() function to identify main argument
+  - Added Convex storage integration following established patterns
+  - Used higher temperature (0.8) and longer target length (1000 words) for creative content
+  - Included comprehensive error handling with generateFallbackOpEd()
+  - Cost tracking automatically handled via OpenRouter completeTask()
+  ```
+- [x] Design op-ed prompt in `prompts/oped.txt` emphasizing strong thesis, supporting arguments, call-to-action
+  ```
+  Work Log:
+  - Analyzed existing prompts/article.txt template to understand placeholder pattern
+  - Created comprehensive op-ed template following {VARIABLE_NAME} placeholder structure
+  - Added strong thesis emphasis with clear opening paragraph requirement
+  - Structured 2-3 supporting arguments section with evidence requirements
+  - Included specific call-to-action section for actionable conclusions
+  - Integrated host personality placeholders (analytical depth, vocabulary, pace, interests)
+  - Adapted for multi-story synthesis vs single story (article template)
+  - Added opinion-specific structure: Opening + Arguments + Synthesis + Call-to-Action
+  - Included opinion writing techniques and voice establishment guidelines
+  - Maintained editorial DNA integration with perspectives and values placeholders
+  ```
+- [x] Implement `selectOpEdTopics(stories, limit=2)` choosing most controversial/important topics for op-eds
+  ```
+  Work Log:
+  - Used pattern-scout to analyze existing editorial importance calculation patterns
+  - Leveraged existing calculateStoryImportance() from editorial.ts as foundation
+  - Implemented three-factor scoring system:
+    * calculateOpinionWorthiness() - editorial importance + opinion keywords + systemic content
+    * calculateControversyPotential() - controversy keywords + systemic change + tech disruption
+    * calculateSynthesisPotential() - thematic connections + trend indicators + second-order effects
+  - Used weighted combination: 40% controversy, 40% synthesis, 20% opinion worthiness
+  - Added minimum threshold filtering (6.0 opinion score) and ranking by combined score
+  - Created OpEdTopicScore interface with detailed scoring breakdown
+  - Added keyword extraction and thematic matching for story synthesis detection
+  - Included human-readable selection reasons for transparency
+  - Enhanced returned stories with controversy/synthesis metadata
+  ```
+- [x] Write `validateOpEd(text)` ensuring clear position, supporting evidence, conclusion
+  ```
+  Work Log:
+  - Used pattern-scout to analyze existing validateArticle() patterns from generators/article.ts
+  - Created comprehensive OpEdValidationResult interface with 8 validation components
+  - Implemented 8-factor validation system:
+    * Thesis detection (strong/moderate patterns: "I believe that", "The truth is", etc.)
+    * Argument structure (minimum 2 arguments with evidence keywords)
+    * Synthesis quality (transition words, narrative coherence, synthesis keywords)
+    * Personal perspective (opinion strength, voice indicators: "we must", "should")
+    * Call-to-action validation (action patterns, specific action verbs)
+    * Length, structure, placeholder checks (adapted from article validation)
+  - Used op-ed specific weighted scoring (thesis: 3.5, arguments: 3.0 vs standard article weights)
+  - Higher validation thresholds (6.5/7.5 vs 6.0/7.0 for articles)
+  - Minimum 800 words vs 200 for articles (op-eds need substantial content)
+  - Added quickValidateOpEd() for simple pass/fail checks with opinion voice requirement
+  - Comprehensive error handling with detailed recommendations and issue classification
+  ```
+- [x] Add cost tracking specifically for op-eds given higher model costs
+  ```
+  Work Log:
+  - Enhanced CostTracking interface to include taskTypeTotals for tracking costs by task type
+  - Updated trackTokenUsage() to track costs by task type in addition to model and daily totals
+  - Added comprehensive OpEdCostSummary interface with cost analysis, budget status, and comparisons
+  - Implemented getOpEdCostSummary() to analyze op-ed specific costs vs articles (cost multiplier, differences)
+  - Created logOpEdCostAnalysis() for automatic cost logging with budget warnings and projections
+  - Added shouldLimitOpEdGeneration() to prevent budget overruns (80% budget = limited generation)
+  - Integrated cost checking into op-ed generator: pre-generation budget check, post-generation analysis
+  - Added getTaskTypeCostBreakdown() for comprehensive task-based cost analysis
+  - Monthly projections, daily budget tracking, and automatic cost limiting for GPT-4o usage
+  ```
 
 ### Daily Brief Generation ($0.05/day)
-- [ ] Create `src/generators/brief.ts` with `generateDailyBrief(allContent)` summarizing the day's coverage
-- [ ] Implement `extractKeyPoints(content)` pulling 3-5 bullet points per major story
-- [ ] Write `generateExecutiveSummary(stories, maxLength=200)` for brief opener
-- [ ] Add `formatBrief(summary, bulletPoints, quickTakes)` creating structured brief output
-- [ ] Ensure brief stays under 500 words total for quick consumption
+- [x] Create `src/generators/brief.ts` with `generateDailyBrief(allContent)` summarizing the day's coverage
+  ```
+  Work Log:
+  - Created comprehensive brief.ts with 500+ lines
+  - Implemented multi-story synthesis for daily content aggregation
+  - Uses TaskType.SUMMARIZATION (Claude 3.5 Sonnet) for cost efficiency
+  - Includes topic analysis, key insights extraction, and quality scoring
+  - Integrated with Convex storage using [BRIEF] prefix
+  - Added fallback generation for reliability
+  ```
+- [x] Implement `extractKeyPoints(content)` pulling 3-5 bullet points per major story
+- [x] Write `generateExecutiveSummary(stories, maxLength=200)` for brief opener
+- [x] Add `formatBrief(summary, bulletPoints, quickTakes)` creating structured brief output
+- [x] Ensure brief stays under 500 words total for quick consumption
 
 ### Podcast Script Generation ($1/day for script only)
-- [ ] Refactor existing `writeIntroduction()` to use GPT-4o via OpenRouter instead of deprecated OpenAI v3
-- [ ] Update `writeSegment()` to generate richer narratives with historical context and predictions
-- [ ] Implement `generateTransitions(segment1, segment2)` for smooth flow between stories
-- [ ] Create `generateDiscussion(story, hosts)` for multi-host dialogue on complex topics
+- [x] Refactor existing `writeIntroduction()` to use GPT-4o via OpenRouter instead of deprecated OpenAI v3
+  ```
+  Work Log:
+  - Migrated from deprecated OpenAI v3 text-davinci-003 completion API to modern OpenRouter
+  - Added OpenRouterClient import and initialization in pages/api/episodes.ts
+  - Converted legacy prompt format to chat completion with system + user messages
+  - Uses TaskType.SCRIPT_GENERATION which routes to openai/gpt-4o model
+  - Maintained existing retry logic (5 attempts, 5s delays) and error handling
+  - Added cost tracking and logging for budget monitoring
+  - Set reasonable 500 token limit for podcast intro generation
+  - Preserved host personality integration and prompt placeholder replacement
+  ```
+- [x] Update `writeSegment()` to generate richer narratives with historical context and predictions
+  ```
+  Work Log:
+  - Migrated from deprecated OpenAI v3 text-davinci-003 to OpenRouter with GPT-4o
+  - Added SegmentOptions interface with includeHistoricalContext, includePredictions, targetLength
+  - Created buildSegmentSystemPrompt() for enhanced host personality integration
+  - Created buildSegmentUserPrompt() with conditional historical/prediction instructions
+  - Enhanced system prompts with structured segment requirements and adaptive content
+  - Updated call site to enable both historical context and predictions by default
+  - Increased target length from ~400 to 800 words for richer narratives
+  - Added cost tracking and improved error handling following established patterns
+  - Enhanced segments now include: Hook → Context → Analysis → Historical → Future → Conclusion
+  ```
+- [x] Implement `generateTransitions(segment1, segment2)` for smooth flow between stories
+  ```
+  Work Log:
+  - Implemented generateTransitions() function using OpenRouter + GPT-4o pattern
+  - Added buildTransitionSystemPrompt() with host-specific transition phrases and personality
+  - Added buildTransitionUserPrompt() with segment context and story themes  
+  - Integrated host alternation pattern with proper personality-based transition phrases
+  - Added fallback transition generation for reliability (5 randomized options)
+  - Updated episode generation pipeline to call generateTransitions() between segments
+  - Enhanced episode structure to include transitions array alongside segments
+  - Used TaskType.SCRIPT_GENERATION for consistent GPT-4o routing and cost tracking
+  - Optimized for concise 30-50 word transitions (10-15 seconds spoken)
+  - Added comprehensive error handling with retry logic and fallback options
+  ```
+- [x] Create `generateDiscussion(story, hosts)` for multi-host dialogue on complex topics
+  ```
+  Work Log:
+  - Implemented comprehensive generateDiscussion() function in src/lib/hosts.ts
+  - Added HostDiscussion and DiscussionOptions interfaces for full configurability
+  - Built multi-host system prompt with personality integration and interaction dynamics
+  - Created story complexity analysis (1-10 scale) to determine discussion worthiness  
+  - Added theme extraction with 10 categories (Technology, Economy, Politics, etc.)
+  - Implemented intelligent fallback to 2-host dialogue for simpler stories
+  - Added comprehensive error handling with personality-aware fallback discussions
+  - Supports 2-4 hosts with automatic participant management and turn balancing
+  - Uses TaskType.DIALOGUE_GENERATION routing to GPT-4o with debate temperature control
+  - Added discussion metrics: word count, turns per host, complexity tracking
+  - Includes debate mode option for controversial topics with higher temperature (0.8)
+  - Integrates with existing host selection algorithms and personality validation
+  ```
 - [ ] Add `scriptTiming(text)` to estimate speaking duration (150 words per minute average)
 
 ## Phase 4: Audio Production Pipeline (Day 9-10)

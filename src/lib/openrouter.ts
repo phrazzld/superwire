@@ -302,6 +302,7 @@ export interface CostTracking {
   entries: CostEntry[];
   dailyTotals: Record<string, number>;
   modelTotals: Record<string, number>;
+  taskTypeTotals: Record<string, number>; // Track costs by task type
   grandTotal: number;
 }
 
@@ -350,6 +351,7 @@ export async function trackTokenUsage(
       entries: [],
       dailyTotals: {},
       modelTotals: {},
+      taskTypeTotals: {},
       grandTotal: 0,
     };
   }
@@ -363,6 +365,11 @@ export async function trackTokenUsage(
 
   // Update model total
   costData.modelTotals[model] = (costData.modelTotals[model] || 0) + cost;
+
+  // Update task type total
+  if (options?.taskType) {
+    costData.taskTypeTotals[options.taskType] = (costData.taskTypeTotals[options.taskType] || 0) + cost;
+  }
 
   // Update grand total
   costData.grandTotal += cost;
@@ -418,6 +425,7 @@ export enum TaskType {
   
   // Creative generation tasks
   CREATIVE_WRITING = 'creative',          // Op-eds, narrative content
+  ARTICLE_GENERATION = 'article',         // News articles, cost-efficient
   SCRIPT_GENERATION = 'script',           // Podcast scripts
   DIALOGUE_GENERATION = 'dialogue',       // Multi-host discussions
   
@@ -449,6 +457,7 @@ export const MODEL_ROUTER: Record<TaskType, string> = {
   
   // Use GPT-4o for creative and complex generation
   [TaskType.CREATIVE_WRITING]: 'openai/gpt-4o',
+  [TaskType.ARTICLE_GENERATION]: 'google/gemini-2.0-flash-thinking-exp:free', // Cost-efficient articles
   [TaskType.SCRIPT_GENERATION]: 'openai/gpt-4o',
   [TaskType.DIALOGUE_GENERATION]: 'openai/gpt-4o',
   
@@ -516,3 +525,213 @@ export const MODEL_CAPABILITIES = {
     weaknesses: ['less refined than commercial models'],
   },
 };
+
+/**
+ * Op-Ed specific cost tracking and analysis
+ */
+export interface OpEdCostSummary {
+  totalOpEdCost: number;
+  averageCostPerOpEd: number;
+  opEdCount: number;
+  dailyOpEdCosts: Record<string, number>;
+  comparisonToArticles: {
+    articleAverageCost: number;
+    costMultiplier: number;
+    costDifference: number;
+  };
+  monthlyProjection: number;
+  budgetStatus: {
+    dailyBudgetUsed: number;
+    remainingBudget: number;
+    daysUntilBudgetExceeded: number;
+  };
+}
+
+/**
+ * Get op-ed specific cost analysis
+ */
+export async function getOpEdCostSummary(costsFilePath?: string): Promise<OpEdCostSummary | null> {
+  const costData = await getCostSummary(costsFilePath);
+  if (!costData) return null;
+
+  // Get op-ed specific entries
+  const opEdEntries = costData.entries.filter(entry => 
+    entry.taskType === TaskType.CREATIVE_WRITING || entry.taskType?.includes('oped')
+  );
+
+  const opEdCount = opEdEntries.length;
+  const totalOpEdCost = opEdEntries.reduce((sum, entry) => sum + entry.cost, 0);
+  const averageCostPerOpEd = opEdCount > 0 ? totalOpEdCost / opEdCount : 0;
+
+  // Calculate daily op-ed costs
+  const dailyOpEdCosts: Record<string, number> = {};
+  opEdEntries.forEach(entry => {
+    const date = entry.timestamp.split('T')[0];
+    dailyOpEdCosts[date] = (dailyOpEdCosts[date] || 0) + entry.cost;
+  });
+
+  // Compare to article costs
+  const articleEntries = costData.entries.filter(entry => 
+    entry.taskType === TaskType.ARTICLE_GENERATION || entry.taskType?.includes('article')
+  );
+  const articleAverageCost = articleEntries.length > 0 
+    ? articleEntries.reduce((sum, entry) => sum + entry.cost, 0) / articleEntries.length
+    : 0;
+
+  const costMultiplier = articleAverageCost > 0 ? averageCostPerOpEd / articleAverageCost : 0;
+  const costDifference = averageCostPerOpEd - articleAverageCost;
+
+  // Monthly projection (based on 2 op-eds per day, 30 days)
+  const monthlyProjection = averageCostPerOpEd * 2 * 30;
+
+  // Budget analysis (assuming $6/day total budget, op-eds are part of it)
+  const today = new Date().toISOString().split('T')[0];
+  const todayTotal = costData.dailyTotals[today] || 0;
+  const dailyBudget = 6.0;
+  const dailyBudgetUsed = (todayTotal / dailyBudget) * 100;
+  const remainingBudget = Math.max(0, dailyBudget - todayTotal);
+  const daysUntilBudgetExceeded = remainingBudget > 0 && averageCostPerOpEd > 0
+    ? Math.floor(remainingBudget / (averageCostPerOpEd * 2)) // 2 op-eds per day
+    : Infinity;
+
+  return {
+    totalOpEdCost,
+    averageCostPerOpEd,
+    opEdCount,
+    dailyOpEdCosts,
+    comparisonToArticles: {
+      articleAverageCost,
+      costMultiplier,
+      costDifference
+    },
+    monthlyProjection,
+    budgetStatus: {
+      dailyBudgetUsed,
+      remainingBudget,
+      daysUntilBudgetExceeded
+    }
+  };
+}
+
+/**
+ * Log op-ed cost analysis to console
+ */
+export async function logOpEdCostAnalysis(costsFilePath?: string): Promise<void> {
+  const summary = await getOpEdCostSummary(costsFilePath);
+  if (!summary) {
+    console.log('📊 No op-ed cost data available yet');
+    return;
+  }
+
+  console.log('\n📊 Op-Ed Cost Analysis:');
+  console.log(`💰 Total Op-Ed Cost: $${summary.totalOpEdCost.toFixed(4)}`);
+  console.log(`📝 Op-Eds Generated: ${summary.opEdCount}`);
+  console.log(`💵 Average Cost per Op-Ed: $${summary.averageCostPerOpEd.toFixed(4)}`);
+
+  if (summary.comparisonToArticles.articleAverageCost > 0) {
+    console.log(`\n📈 Cost Comparison to Articles:`);
+    console.log(`   Article Average: $${summary.comparisonToArticles.articleAverageCost.toFixed(4)}`);
+    console.log(`   Op-Ed Premium: ${summary.comparisonToArticles.costMultiplier.toFixed(1)}x more expensive`);
+    console.log(`   Cost Difference: +$${summary.comparisonToArticles.costDifference.toFixed(4)} per piece`);
+  }
+
+  console.log(`\n📅 Monthly Projection: $${summary.monthlyProjection.toFixed(2)} (2 op-eds/day)`);
+  
+  console.log(`\n🎯 Budget Status:`);
+  console.log(`   Daily Budget Used: ${summary.budgetStatus.dailyBudgetUsed.toFixed(1)}%`);
+  console.log(`   Remaining Today: $${summary.budgetStatus.remainingBudget.toFixed(2)}`);
+  
+  if (summary.budgetStatus.daysUntilBudgetExceeded === Infinity) {
+    console.log(`   Budget Status: ✅ Within limits`);
+  } else if (summary.budgetStatus.daysUntilBudgetExceeded > 7) {
+    console.log(`   Budget Status: ✅ Safe for ${summary.budgetStatus.daysUntilBudgetExceeded} days`);
+  } else if (summary.budgetStatus.daysUntilBudgetExceeded > 1) {
+    console.log(`   Budget Status: ⚠️ Will exceed budget in ${summary.budgetStatus.daysUntilBudgetExceeded} days`);
+  } else {
+    console.log(`   Budget Status: 🚨 Budget will be exceeded tomorrow!`);
+  }
+}
+
+/**
+ * Check if op-ed generation should be limited due to cost concerns
+ */
+export async function shouldLimitOpEdGeneration(costsFilePath?: string): Promise<{
+  shouldLimit: boolean;
+  reason?: string;
+  maxOpEdsAllowed: number;
+}> {
+  const summary = await getOpEdCostSummary(costsFilePath);
+  if (!summary) {
+    return { shouldLimit: false, maxOpEdsAllowed: 2 }; // Default limit
+  }
+
+  const dailyBudget = 6.0;
+  const currentSpend = dailyBudget - summary.budgetStatus.remainingBudget;
+  const averageCost = summary.averageCostPerOpEd;
+
+  // If we've used more than 80% of daily budget, limit op-eds
+  if (summary.budgetStatus.dailyBudgetUsed > 80) {
+    const remainingForOpEds = summary.budgetStatus.remainingBudget * 0.5; // Reserve 50% for op-eds
+    const maxOpEds = averageCost > 0 ? Math.floor(remainingForOpEds / averageCost) : 0;
+    
+    return {
+      shouldLimit: true,
+      reason: `Daily budget 80% used (${summary.budgetStatus.dailyBudgetUsed.toFixed(1)}%)`,
+      maxOpEdsAllowed: Math.max(0, maxOpEds)
+    };
+  }
+
+  // If average op-ed cost is too high (>$1), limit generation
+  if (averageCost > 1.0) {
+    return {
+      shouldLimit: true,
+      reason: `Op-ed cost too high: $${averageCost.toFixed(4)} per piece`,
+      maxOpEdsAllowed: 1 // Only allow 1 expensive op-ed per day
+    };
+  }
+
+  // Normal operation
+  return {
+    shouldLimit: false,
+    maxOpEdsAllowed: 2
+  };
+}
+
+/**
+ * Get task type cost breakdown
+ */
+export async function getTaskTypeCostBreakdown(costsFilePath?: string): Promise<Record<string, {
+  totalCost: number;
+  count: number;
+  averageCost: number;
+  percentage: number;
+}> | null> {
+  const costData = await getCostSummary(costsFilePath);
+  if (!costData || costData.entries.length === 0) return null;
+
+  const taskTypeStats: Record<string, { totalCost: number; count: number }> = {};
+
+  // Calculate stats for each task type
+  costData.entries.forEach(entry => {
+    const taskType = entry.taskType || 'unknown';
+    if (!taskTypeStats[taskType]) {
+      taskTypeStats[taskType] = { totalCost: 0, count: 0 };
+    }
+    taskTypeStats[taskType].totalCost += entry.cost;
+    taskTypeStats[taskType].count += 1;
+  });
+
+  // Convert to breakdown format
+  const breakdown: Record<string, any> = {};
+  Object.keys(taskTypeStats).forEach(taskType => {
+    const stats = taskTypeStats[taskType];
+    breakdown[taskType] = {
+      totalCost: stats.totalCost,
+      count: stats.count,
+      averageCost: stats.totalCost / stats.count,
+      percentage: (stats.totalCost / costData.grandTotal) * 100
+    };
+  });
+
+  return breakdown;
+}

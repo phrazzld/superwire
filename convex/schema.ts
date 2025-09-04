@@ -5,6 +5,7 @@ export default defineSchema({
   episodes: defineTable({
     date: v.string(), // ISO date string
     audioUrl: v.string(),
+    audioStorageId: v.optional(v.id("_storage")), // Convex storage ID for audio file
     transcript: v.string(),
     stories: v.array(
       v.object({

@@ -160,3 +160,59 @@ export const getRecentArticles = query({
     return articles;
   },
 });
+
+// File storage mutations and queries
+
+// Generate upload URL for file uploads
+export const generateUploadUrl = mutation({
+  handler: async (ctx: any) => {
+    return await ctx.storage.generateUploadUrl();
+  },
+});
+
+// Get public URL for a stored file
+export const getFileUrl = query({
+  args: { storageId: v.id("_storage") },
+  handler: async (ctx: any, args: any) => {
+    return await ctx.storage.getUrl(args.storageId);
+  },
+});
+
+// Delete a stored file
+export const deleteFile = mutation({
+  args: { storageId: v.id("_storage") },
+  handler: async (ctx: any, args: any) => {
+    await ctx.storage.delete(args.storageId);
+    return args.storageId;
+  },
+});
+
+// Store episode with file storage ID (enhanced version)
+export const storeEpisodeWithStorage = mutation({
+  args: {
+    date: v.string(),
+    audioUrl: v.string(), // Keep for backward compatibility
+    audioStorageId: v.optional(v.id("_storage")), // New field for Convex storage
+    transcript: v.string(),
+    stories: v.array(
+      v.object({
+        headline: v.string(),
+        summary: v.string(),
+        source: v.string(),
+        url: v.optional(v.string()),
+      })
+    ),
+    costs: v.object({
+      generation: v.number(),
+      audio: v.number(),
+      total: v.number(),
+    }),
+  },
+  handler: async (ctx: any, args: any) => {
+    const episodeId = await ctx.db.insert("episodes", {
+      ...args,
+      createdAt: Date.now(),
+    });
+    return episodeId;
+  },
+});

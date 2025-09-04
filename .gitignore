@@ -40,6 +40,9 @@ next-env.d.ts
 # cost tracking
 costs.json
 costs.json.backup-*
+metrics.json
+knowledge.md
+tmp/
 
 super-wire-firebase-adminsdk-hsukl-d30227eea4.json
 .vscode

@@ -407,3 +407,45 @@ export function extractSummary(text: string, maxWords: number = 100): string {
   
   return summary + '...';
 }
+
+/**
+ * Estimate speaking duration for text based on average speech rate
+ * @param text - Text to analyze for speaking time
+ * @param wordsPerMinute - Speaking rate (default 150 WPM for natural speech)
+ * @returns Duration object with seconds, minutes, and formatted string
+ */
+export function scriptTiming(text: string, wordsPerMinute: number = 150): {
+  totalSeconds: number;
+  minutes: number;
+  seconds: number;
+  formatted: string;
+} {
+  if (!text || typeof text !== 'string') {
+    return {
+      totalSeconds: 0,
+      minutes: 0,
+      seconds: 0,
+      formatted: '0:00'
+    };
+  }
+
+  // Count words using established codebase pattern
+  const wordCount = text.split(/\s+/).filter(word => word.length > 0).length;
+  
+  // Calculate duration in seconds
+  const totalSeconds = Math.round((wordCount / wordsPerMinute) * 60);
+  
+  // Convert to minutes and remaining seconds
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  
+  // Format as MM:SS with leading zero for seconds
+  const formatted = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  
+  return {
+    totalSeconds,
+    minutes,
+    seconds,
+    formatted
+  };
+}

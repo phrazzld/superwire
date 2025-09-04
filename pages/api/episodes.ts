@@ -683,7 +683,7 @@ const recordEpisode = async (episode: Episode): Promise<void> => {
     }
   );
 
-  console.log("Stitching files together...");
+  console.log("Stitching files together with enhanced quality...");
 
   let filenames: string[] = [];
 
@@ -695,34 +695,95 @@ const recordEpisode = async (episode: Episode): Promise<void> => {
   filenames.push(`${EPISODES_DIR}/${timestamp}-99-conclusion.mp3`);
   const mergedFilename = `${EPISODES_DIR}/${timestamp}-episode.mp3`;
 
-  ffmpeg()
-    .input("concat:" + filenames.join("|"))
-    .audioCodec("copy")
+  // Build filter_complex chain for enhanced audio concatenation
+  let filterComplex = '';
+  let inputMap = '';
+  
+  // Create FFmpeg command with multiple inputs
+  const ffmpegCommand = ffmpeg();
+  
+  // Add each file as separate input for filter_complex processing
+  filenames.forEach((filename, index) => {
+    ffmpegCommand.input(filename);
+    inputMap += `[${index}:a]`;
+  });
+  
+  // Build concat filter with proper audio stream concatenation
+  // concat=n=X:v=0:a=1 where X is number of files, v=0 means no video, a=1 means audio output
+  filterComplex = `${inputMap}concat=n=${filenames.length}:v=0:a=1[out]`;
+  
+  ffmpegCommand
+    .complexFilter([filterComplex])
+    .map('[out]') // Map the output of the filter
+    .audioCodec('libmp3lame') // Use high-quality MP3 encoder instead of copy
+    .audioBitrate('128k') // Set consistent 128kbps bitrate for podcast quality
+    .audioFrequency(44100) // Standard 44.1kHz sample rate
+    .format('mp3')
+    .on("start", (commandLine) => {
+      console.log("FFmpeg command:", commandLine);
+    })
     .on("end", async () => {
-      console.log("Merging complete!");
-      // Write merged file to Firebase Storage
-      const bucket = firebase.storage().bucket();
+      console.log("Enhanced audio merging complete!");
+      
+      try {
+        // Write merged file to Firebase Storage
+        const bucket = firebase.storage().bucket();
 
-      await bucket.upload(mergedFilename, {
-        destination: `${timestamp}-episode.mp3`,
-      });
+        await bucket.upload(mergedFilename, {
+          destination: `${timestamp}-episode.mp3`,
+        });
+        
+        console.log("Episode uploaded to Firebase Storage");
 
-      // Delete all files in EPISODES_DIR
-      fs.readdir(EPISODES_DIR, (err, files) => {
-        if (err) throw err;
+        // Delete all files in EPISODES_DIR
+        fs.readdir(EPISODES_DIR, (err, files) => {
+          if (err) {
+            console.error("Error reading episodes directory for cleanup:", err);
+            return;
+          }
 
-        files.forEach((file) => {
-          const filePath = path.join(EPISODES_DIR, file);
+          files.forEach((file) => {
+            const filePath = path.join(EPISODES_DIR, file);
 
-          fs.unlink(filePath, (err) => {
-            if (err) throw err;
-
-            console.log(`Deleted file ${filePath}`);
+            fs.unlink(filePath, (err) => {
+              if (err) {
+                console.error(`Error deleting file ${filePath}:`, err);
+              } else {
+                console.log(`Deleted file ${filePath}`);
+              }
+            });
           });
         });
-      });
+      } catch (error) {
+        console.error("Error in post-processing:", error);
+      }
     })
-    .on("error", (err) => console.error("Error merging files:", err))
+    .on("error", (err) => {
+      console.error("Error merging files with filter_complex:", err);
+      console.error("FFmpeg error details:", err.message);
+      
+      // Fallback to simple concatenation if filter_complex fails
+      console.log("Falling back to simple concatenation...");
+      ffmpeg()
+        .input("concat:" + filenames.join("|"))
+        .audioCodec("copy")
+        .on("end", async () => {
+          console.log("Fallback merging complete!");
+          try {
+            const bucket = firebase.storage().bucket();
+            await bucket.upload(mergedFilename, {
+              destination: `${timestamp}-episode.mp3`,
+            });
+          } catch (error) {
+            console.error("Error uploading fallback file:", error);
+          }
+        })
+        .on("error", (fallbackErr) => console.error("Fallback merge also failed:", fallbackErr))
+        .saveToFile(mergedFilename);
+    })
+    .on("progress", (progress) => {
+      console.log(`Processing: ${Math.round(progress.percent || 0)}% done`);
+    })
     .saveToFile(mergedFilename);
 };
 

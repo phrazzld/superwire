@@ -334,7 +334,7 @@ function testIntegrationScenarios(): boolean {
     colorLog('white', `\n${i + 1}. ${scenario.name}`);
     colorLog('white', `   Description: ${scenario.description}`);
     colorLog('white', `   Input files: ${scenario.files.length} files`);
-    if ('timings' in scenario) {
+    if ('timings' in scenario && scenario.timings) {
       colorLog('white', `   Timings: [${scenario.timings.join(', ')}]s`);
     }
     colorLog('white', `   Benefit: ${scenario.expectedBenefit}`);

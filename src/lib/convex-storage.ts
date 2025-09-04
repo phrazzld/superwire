@@ -84,7 +84,7 @@ export async function uploadToStorage(
     console.log(`📁 Uploading ${fileName} (${(fileStats.size / 1024 / 1024).toFixed(2)}MB) to Convex storage...`);
 
     // Generate upload URL from Convex  
-    const uploadUrl = await client.mutation(STORAGE_FUNCTIONS.generateUploadUrl);
+    const uploadUrl = await client.mutation(STORAGE_FUNCTIONS.generateUploadUrl as any);
     
     if (!uploadUrl) {
       return {
@@ -123,7 +123,7 @@ export async function uploadToStorage(
     }
 
     // Get the public URL for the uploaded file
-    const fileUrl = await client.query(STORAGE_FUNCTIONS.getFileUrl, { storageId });
+    const fileUrl = await client.query(STORAGE_FUNCTIONS.getFileUrl as any, { storageId });
 
     console.log(`✅ File uploaded successfully: ${fileName}`);
     console.log(`📄 Storage ID: ${storageId}`);
@@ -192,7 +192,7 @@ export async function getFileUrl(storageId: string): Promise<string | null> {
       return null;
     }
 
-    const fileUrl = await client.query(STORAGE_FUNCTIONS.getFileUrl, { storageId });
+    const fileUrl = await client.query(STORAGE_FUNCTIONS.getFileUrl as any, { storageId });
     return fileUrl;
 
   } catch (error) {
@@ -213,7 +213,7 @@ export async function deleteFile(storageId: string): Promise<boolean> {
       return false;
     }
 
-    await client.mutation(STORAGE_FUNCTIONS.deleteFile, { storageId });
+    await client.mutation(STORAGE_FUNCTIONS.deleteFile as any, { storageId });
     console.log(`🗑️ File deleted: ${storageId}`);
     return true;
 

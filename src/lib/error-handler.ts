@@ -298,7 +298,7 @@ export async function withRetryAndCostTracking<T>(
           model,
           usage.prompt_tokens,
           usage.completion_tokens,
-          taskType
+          { taskType }
         );
       }
     }
@@ -306,7 +306,7 @@ export async function withRetryAndCostTracking<T>(
     return response;
   }, optsWithCosts);
 
-  return result;
+  return result as RetryResult<T & { usage?: any }>;
 }
 
 /**
@@ -322,7 +322,7 @@ export async function withRetryAudio<T>(
     const result = await fn();
     
     // Track audio costs
-    await trackAudioUsage(textLength, voiceId, 'audio_generation');
+    await trackAudioUsage(voiceId, textLength, { taskType: 'audio_generation' });
     
     return result;
   }, options);

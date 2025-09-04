@@ -329,9 +329,7 @@ export function logGenerationMetrics(results: {
       success: results.steps.audioGeneration.success,
       duration: results.steps.audioGeneration.duration,
       costs: { ai: 0, audio: audioCosts, total: audioCosts },
-      metadata: {
-        audioGenerated: results.steps.audioGeneration.audioGenerated || false
-      }
+      metadata: {}
     });
   }
 

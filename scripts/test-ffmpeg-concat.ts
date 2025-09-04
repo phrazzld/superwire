@@ -144,4 +144,4 @@ function runAllTests() {
 // Run tests if this script is executed directly
 if (require.main === module) {
   runAllTests();
-}
+}export {};

@@ -230,8 +230,7 @@ async function executeStep(
 
         const topStories = context.filteredStories.slice(0, 5);
         const articleResults = await generateArticlesBatch(topStories, {
-          targetLength: 500,
-          includeContext: true
+          targetLength: 500
         });
         context.generatedArticles = articleResults;
         return {
@@ -253,12 +252,14 @@ async function executeStep(
         }
 
         const opEdTopics = selectOpEdTopics(context.filteredStories, 2);
-        const hosts = await loadHostsConfig();
+        const hostsConfig = await loadHostsConfig();
+        const hostNames = Object.keys(hostsConfig);
         const opEdResults = [];
 
         for (const topic of opEdTopics) {
           try {
-            const host = hosts[Math.floor(Math.random() * hosts.length)];
+            const hostName = hostNames[Math.floor(Math.random() * hostNames.length)];
+            const host = (hostsConfig as any)[hostName];
             const editorialDNA = await loadEditorialDNA();
             const opEd = await generateOpEd([topic], host, editorialDNA);
             opEdResults.push(opEd);
@@ -304,9 +305,9 @@ async function executeStep(
         const today = new Date().toISOString().split('T')[0];
         
         context.costs = {
-          aiCosts: aiCostSummary.dailyTotals[today] || 0,
-          audioCosts: audioCostSummary.dailyTotal || 0,
-          totalCosts: (aiCostSummary.dailyTotals[today] || 0) + (audioCostSummary.dailyTotal || 0)
+          aiCosts: aiCostSummary?.dailyTotals[today] || 0,
+          audioCosts: audioCostSummary?.todaysAudioCosts || 0,
+          totalCosts: (aiCostSummary?.dailyTotals[today] || 0) + (audioCostSummary?.todaysAudioCosts || 0)
         };
 
         return {

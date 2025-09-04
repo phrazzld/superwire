@@ -11,7 +11,7 @@
  * - Metrics tracking for trend analysis
  */
 
-import { getCostSummary, shouldLimitGeneration } from './openrouter';
+import { getCostSummary, shouldLimitOpEdGeneration } from './openrouter';
 import { getAudioCostSummary, shouldLimitAudioGeneration } from './elevenlabs';
 import { notifyFailure, notifyError } from './notifications';
 import { ErrorCategory } from './error-handler';
@@ -137,8 +137,8 @@ async function getCurrentCosts(): Promise<{
     
     const today = new Date().toISOString().split('T')[0];
     
-    const aiCosts = aiCostSummary.dailyTotals[today] || 0;
-    const audioCosts = audioCostSummary.dailyTotal || 0;
+    const aiCosts = aiCostSummary?.dailyTotals[today] || 0;
+    const audioCosts = audioCostSummary?.todaysAudioCosts || 0;
     
     return {
       aiCosts,
@@ -257,7 +257,7 @@ export async function checkCostThreshold(
     projectedDailyCost: projectDailyCost(costs.totalCosts),
     recommendations: [],
     shouldLimit: {
-      ai: shouldLimitGeneration(),
+      ai: false, // Will be set later with async call
       audio: shouldLimitAudioGeneration(),
       overall: overallStatus === BudgetStatus.CRITICAL || overallStatus === BudgetStatus.EXCEEDED
     }

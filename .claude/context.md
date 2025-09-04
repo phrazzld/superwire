@@ -90,6 +90,16 @@
 - **Turn Management with Participation Balance**: AI-guided conversation turn estimation with participation tracking prevents any single host from dominating multi-host discussions
 - **Discussion Metrics Collection**: Comprehensive tracking of word counts, turn distribution, complexity scores, and discussion quality enables performance monitoring and algorithm optimization
 - **Fallback Discussion Generation**: Personality-specific emergency content generation maintains authentic host voices even when primary AI generation fails, ensuring pipeline resilience
+- **Audio Player HTML5 Pattern**: Standard HTML5 `<audio>` element with `controls` attribute and `preload="none"` for lazy loading - app/page.tsx:462-467
+- **Firebase Audio URL Resolution**: Using `getDownloadURL(ref(storage, filename))` pattern for resolving Firebase Storage audio URLs - requires async handling
+- **React useState Audio State Management**: Multiple state variables pattern: `useState<Episode[]>([])` for episode list, `useState(false)` for loading states
+- **TypeScript Audio Interface Pattern**: Episode interface with `name: string, url: string, date: string, duration?: number` structure for typed audio metadata
+- **Tailwind CSS Layout Patterns**: Consistent spacing with `max-w-7xl mx-auto px-4 sm:px-6 lg:px-8`, card layouts with `bg-white rounded-lg shadow-sm border border-gray-200 p-6`
+- **Tab Navigation State Pattern**: Union type `ContentTab = "overview" | "articles" | "opinions" | "brief" | "podcast"` with conditional rendering based on activeTab
+- **Loading State Pattern**: Centralized loading state with spinner `animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900` and loading text
+- **Date Formatting Utility Pattern**: Consistent date formatting with `toLocaleDateString` and `toLocaleTimeString` with specific locale options
+- **Grid Layout Responsive Pattern**: `grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6` for responsive card grids
+- **Audio Controls Integration Pattern**: Each episode gets unique audio element with `id={episode.name}` for potential JavaScript control
 
 ## Bugs & Fixes
 - **RSS Item Deduplication After Parallel Fetch**: Must deduplicate and sort items after parallel RSS fetching but before scraping to maintain source metadata mapping through the pipeline

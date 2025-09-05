@@ -102,6 +102,9 @@
 - **Audio Controls Integration Pattern**: Each episode gets unique audio element with `id={episode.name}` for potential JavaScript control
 
 ## Bugs & Fixes
+- **Calendar Date State Initialization**: Calendar currentMonth state should initialize from selectedDate if available, otherwise new Date() to prevent calendar starting at wrong month when date is pre-selected
+- **ISO Date String Splitting Consistency**: Always use `.split('T')[0]` pattern for date string normalization vs other splitting approaches - ensures consistent YYYY-MM-DD format across all date comparisons
+- **Calendar Grid Week Boundary Calculation**: Calendar grid generation requires careful date manipulation - `startDate.setDate(startDate.getDate() - startDate.getDay())` ensures Sunday start even across month boundaries
 - **RSS Item Deduplication After Parallel Fetch**: Must deduplicate and sort items after parallel RSS fetching but before scraping to maintain source metadata mapping through the pipeline
 - **Source Metadata Preservation**: When deduplicating items, use Array.find() to map back to original source associations rather than losing source context
 - **Error Collection vs Article Collection**: Failed scrapes can still produce articles (with RSS content fallback) - separate error collection from article collection logic
@@ -367,4 +370,23 @@
 - **Partial Success Threshold Definition**: Requiring minimum 3 completed steps for partial success classification provides meaningful progress threshold vs binary success/failure
 - **Cleanup Function for Failed States**: cleanupIncomplete() removes partial state to enable clean restart - prevents corrupted state accumulation across multiple failed attempts
 - **Complete Generation Metrics Integration**: markGenerationComplete() with comprehensive statistics (duration, counts, costs) provides production-ready completion tracking and analytics
+- **Three-Component Calendar Architecture Over Single Implementation**: Building CalendarView (main), CompactCalendar (space-efficient), and MonthYearPicker (utility) in single file provides comprehensive date navigation solution vs minimal calendar - covers all UI contexts and space constraints
+- **Set-Based Lookup Optimization Over Array Operations**: Converting date arrays to Set for O(1) lookup performance prevents calendar performance degradation with large date ranges vs O(n) array.includes() searches
+- **Comprehensive Date State Management Over Simple Selection**: Managing currentMonth, selectedDate, available dates, and navigation state with proper initialization enables robust calendar behavior vs minimal state management
+- **Visual Availability Indicators Over Text-Only Interface**: Using blue dots, selection highlights, today rings, and availability styling creates intuitive content discovery vs plain date lists
+- **Component Integration Without Architecture Disruption**: Adding calendar alongside existing ContentTabs and grid layouts without modifying established patterns demonstrates clean component integration approach
+- **Filename-Based Date Extraction Over Schema Changes**: Leveraging existing episode filename structure for date population eliminates database modifications while enabling calendar functionality
 - **Pipeline Status Query Functions**: isGenerating() and getGenerationStatus() enable external systems to check pipeline state without state modification - essential for coordination and monitoring
+- **Three Calendar Variants Pattern**: Main CalendarView, CompactCalendar (sidebar optimized), and MonthYearPicker (utility component) provide comprehensive date browsing capabilities for different UI contexts and space constraints
+- **Set-Based Date Lookup Optimization**: Converting available dates array to Set for O(1) lookup performance (`new Set(availableDates.map(date => date.split('T')[0]))`) vs O(n) array includes - critical for calendar performance with large date ranges
+- **Calendar Grid Generation Algorithm**: Starting from Sunday of first-day week and ending Saturday of last-day week creates complete calendar grid - `startDate.setDate(startDate.getDate() - startDate.getDay())` pattern ensures proper calendar layout
+- **Visual Content Availability Indicators**: Blue dots for available dates plus selected/today ring indicators create clear content availability without cluttering calendar interface - users instantly understand which dates have content
+- **Calendar State Management with URL Dates**: Using ISO date strings (YYYY-MM-DD) enables URL-based date selection and consistent date formatting across components - prevents timezone confusion in date handling
+- **Compact Calendar with Full Calendar Toggle**: Sidebar-optimized compact view showing recent 7 dates with expandable full calendar provides space-efficient browsing with option for detailed navigation when needed
+- **Date Formatting Context Pattern**: "Today"/"Yesterday" for recent dates with fallback to formatted dates (`weekday: 'short', month: 'short', day: 'numeric'`) creates user-friendly date display without overwhelming date information
+- **Calendar Integration Without Architecture Changes**: Adding calendar alongside existing ContentTabs without disrupting tab system - demonstrates clean component integration following established patterns
+- **Episode Date Extraction Pattern**: Extracting dates from episode filename format enables calendar population without database schema changes - `episodes.map(ep => ep.date)` leverages existing data structure
+- **Calendar Component Comprehensive Implementation**: Single-file implementation with 400+ lines covering full calendar (main view), compact calendar (sidebar), and month/year picker utility provides complete date browsing solution
+- **No-Pattern-Scout Success Pattern**: Clean implementation without existing calendar patterns took only 15 minutes vs estimated 30-60 minutes - clear requirements and good TypeScript foundation accelerated development
+- **Calendar Performance Optimization**: useMemo for calendar data generation and Set-based date lookups prevents recalculation on each render - essential pattern for responsive calendar interactions
+- **Calendar Visual Design System**: Consistent with existing Tailwind classes, proper accessibility (aria-labels), and professional calendar styling with legend indicators creates production-ready UI components

@@ -998,12 +998,60 @@
   - Source badges for featured variant
   - Icons for read time and sources metadata
   ```
-- [ ] Create `ContentTabs` for switching between Podcast, Articles, Op-Eds, Brief
-- [ ] Add `CalendarView` component for browsing historical content by date
+- [x] Create `ContentTabs` for switching between Podcast, Articles, Op-Eds, Brief
+  ```
+  Work Log:
+  - Created reusable ContentTabs component at app/components/ContentTabs.tsx
+  - Supports controlled and uncontrolled modes with TypeScript typing
+  - Includes Tab interface with optional count badges
+  - Supports sticky navigation, custom styling, and responsive design
+  - Refactored app/page.tsx to use ContentTabs component
+  - Simplified main page from 469 lines to cleaner implementation
+  - Maintained all existing functionality and styling patterns
+  - Added TabPanel utility component for future use
+  - TypeScript compilation verified, development server running successfully
+  ```
+- [x] Add `CalendarView` component for browsing historical content by date
+  ```
+  Work Log:
+  - Created comprehensive CalendarView component at app/components/CalendarView.tsx
+  - Implemented full month calendar grid with date selection and navigation
+  - Added visual indicators for today, selected date, and dates with content
+  - Created MonthYearPicker utility for advanced date navigation
+  - Built CompactCalendar variant for sidebar/mobile views
+  - Integrated into main page with new "Archive" tab
+  - Calendar shows available episode dates with content indicators
+  - Responsive design with show/hide calendar toggle
+  - TypeScript compilation verified, all types properly defined
+  ```
 
 ### Content API
-- [ ] Create `src/app/api/content/[date]/route.ts` returning all content for specific date
-- [ ] Implement `src/app/api/feed/rss/route.ts` generating RSS feed for podcast subscriptions
+- [x] Create `src/app/api/content/[date]/route.ts` returning all content for specific date
+  ```
+  Work Log:
+  - Initially attempted to use App Router API routes in app/api/ directory
+  - Discovered that with hybrid Pages/App Router setup, API routes work in pages/api/
+  - Created pages/api/content/[date].ts using Pages Router pattern
+  - Implemented dynamic date parameter handling with validation
+  - Added Firebase Storage integration for fetching episodes by date
+  - Included mock data generation for demonstration purposes
+  - Added proper cache headers (1 hour for today, 24 hours for past dates)
+  - API returns comprehensive ContentByDate interface with articles, op-eds, brief, and episodes
+  - Successfully tested with various dates, returns appropriate JSON responses
+  ```
+- [x] Implement `src/app/api/feed/rss/route.ts` generating RSS feed for podcast subscriptions
+  ```
+  Work Log:
+  - Due to hybrid router issue, created pages/api/rss.ts instead of app/api/
+  - Installed rss library and @types/rss for RSS generation
+  - Implemented comprehensive podcast RSS feed with iTunes extensions
+  - Fetches episodes from Firebase Storage with proper date parsing
+  - Generates episode titles and descriptions dynamically
+  - Includes all required podcast metadata (author, categories, duration)
+  - Added proper cache headers (1 hour) and content type (application/rss+xml)
+  - Successfully tested RSS feed generation with valid XML output
+  - Ready for podcast app submission (Apple Podcasts, Spotify, etc.)
+  ```
 - [ ] Add `src/app/api/feed/json/route.ts` for JSON feed format support
 - [ ] Create `src/app/api/stats/route.ts` returning generation metrics and costs
 - [ ] Implement caching headers for all API routes (1 hour for current day, indefinite for past)

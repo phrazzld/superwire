@@ -5,6 +5,8 @@ import { storage } from "../pages/_app";
 import { getDownloadURL, ref } from "firebase/storage";
 import AudioPlayer from "./components/AudioPlayer";
 import ArticleCard, { ArticleGrid } from "./components/ArticleCard";
+import ContentTabs, { Tab } from "./components/ContentTabs";
+import CalendarView, { CompactCalendar } from "./components/CalendarView";
 
 // Content type interfaces
 interface Article {
@@ -58,6 +60,10 @@ export default function Home() {
   const [todayContent, setTodayContent] = useState<TodayContent | null>(null);
   const [episodes, setEpisodes] = useState<Episode[]>([]);
   const [generatingContent, setGeneratingContent] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<string>(
+    new Date().toISOString().split('T')[0]
+  );
+  const [showCalendar, setShowCalendar] = useState(false);
 
   // Fetch today's content
   useEffect(() => {
@@ -265,44 +271,25 @@ export default function Home() {
         </div>
       </header>
 
-      {/* Navigation Tabs */}
-      <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <nav className="flex space-x-8">
-            {[
-              { id: "overview" as ContentTab, label: "Overview" },
-              { id: "articles" as ContentTab, label: "Articles", count: todayContent?.articles.length },
-              { id: "opinions" as ContentTab, label: "Op-Eds", count: todayContent?.opeds.length },
-              { id: "brief" as ContentTab, label: "Daily Brief" },
-              { id: "podcast" as ContentTab, label: "Podcast" }
-            ].map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`
-                  py-4 px-1 border-b-2 font-medium text-sm transition-colors
-                  ${activeTab === tab.id
-                    ? "border-blue-500 text-blue-600"
-                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                  }
-                `}
-              >
-                {tab.label}
-                {tab.count !== undefined && (
-                  <span className="ml-2 px-2 py-0.5 text-xs bg-gray-100 rounded-full">
-                    {tab.count}
-                  </span>
-                )}
-              </button>
-            ))}
-          </nav>
-        </div>
-      </div>
 
-      {/* Content Area */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Overview Tab */}
-        {activeTab === "overview" && todayContent && (
+      {/* Content Area with Tabs */}
+      <ContentTabs
+        tabs={[
+          { id: "overview", label: "Overview" },
+          { id: "articles", label: "Articles", count: todayContent?.articles.length },
+          { id: "opinions", label: "Op-Eds", count: todayContent?.opeds.length },
+          { id: "brief", label: "Daily Brief" },
+          { id: "podcast", label: "Podcast" },
+          { id: "archive", label: "Archive" }
+        ]}
+        activeTab={activeTab}
+        onTabChange={(tabId) => setActiveTab(tabId as ContentTab)}
+        sticky={true}
+        contentClassName="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8"
+        renderContent={(tabId) => (
+          <>
+            {/* Overview Tab */}
+            {tabId === "overview" && todayContent && (
           <div className="space-y-8">
             {/* Today's Podcast Episode */}
             {todayContent.episode && (
@@ -371,10 +358,10 @@ export default function Home() {
               </div>
             )}
           </div>
-        )}
+            )}
 
-        {/* Articles Tab */}
-        {activeTab === "articles" && todayContent && (
+            {/* Articles Tab */}
+            {tabId === "articles" && todayContent && (
           <div className="space-y-6">
             <h2 className="text-2xl font-bold text-gray-900">Today's Articles</h2>
             <ArticleGrid columns={1}>
@@ -388,10 +375,10 @@ export default function Home() {
               ))}
             </ArticleGrid>
           </div>
-        )}
+            )}
 
-        {/* Op-Eds Tab */}
-        {activeTab === "opinions" && todayContent && (
+            {/* Op-Eds Tab */}
+            {tabId === "opinions" && todayContent && (
           <div className="space-y-6">
             <h2 className="text-2xl font-bold text-gray-900">Today's Op-Eds</h2>
             <div className="grid grid-cols-1 gap-6">
@@ -409,10 +396,10 @@ export default function Home() {
               ))}
             </div>
           </div>
-        )}
+            )}
 
-        {/* Daily Brief Tab */}
-        {activeTab === "brief" && todayContent?.brief && (
+            {/* Daily Brief Tab */}
+            {tabId === "brief" && todayContent?.brief && (
           <div className="max-w-3xl mx-auto">
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
               <h2 className="text-2xl font-bold text-gray-900 mb-6">Daily Brief</h2>
@@ -432,10 +419,10 @@ export default function Home() {
               </div>
             </div>
           </div>
-        )}
+            )}
 
-        {/* Podcast Tab */}
-        {activeTab === "podcast" && (
+            {/* Podcast Tab */}
+            {tabId === "podcast" && (
           <div className="space-y-6">
             <h2 className="text-2xl font-bold text-gray-900">Podcast Episodes</h2>
             {episodes.length === 0 ? (
@@ -462,8 +449,95 @@ export default function Home() {
               </div>
             )}
           </div>
+            )}
+
+            {/* Archive Tab with Calendar */}
+            {tabId === "archive" && (
+              <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-2xl font-bold text-gray-900">Content Archive</h2>
+                  <button
+                    onClick={() => setShowCalendar(!showCalendar)}
+                    className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                  >
+                    {showCalendar ? "Hide Calendar" : "Show Calendar"}
+                  </button>
+                </div>
+                
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  {/* Calendar View */}
+                  <div className={showCalendar ? "lg:col-span-1" : "hidden"}>
+                    <CalendarView
+                      availableDates={episodes.map(ep => ep.date)}
+                      selectedDate={selectedDate}
+                      onDateSelect={(date) => {
+                        setSelectedDate(date);
+                        // Could load content for selected date here
+                      }}
+                    />
+                  </div>
+                  
+                  {/* Content for selected date */}
+                  <div className={showCalendar ? "lg:col-span-2" : "lg:col-span-3"}>
+                    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                      <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                        Content for {new Date(selectedDate).toLocaleDateString("en-US", {
+                          weekday: "long",
+                          year: "numeric",
+                          month: "long",
+                          day: "numeric"
+                        })}
+                      </h3>
+                      
+                      {/* Find episodes for selected date */}
+                      {(() => {
+                        const dateEpisodes = episodes.filter(ep => 
+                          ep.date.startsWith(selectedDate)
+                        );
+                        
+                        if (dateEpisodes.length > 0) {
+                          return (
+                            <div className="space-y-4">
+                              <h4 className="font-medium text-gray-700">Podcast Episodes</h4>
+                              {dateEpisodes.map(episode => (
+                                <AudioPlayer
+                                  key={episode.name}
+                                  episodeName={episode.name}
+                                  episodeUrl={episode.url}
+                                  episodeDate={episode.date}
+                                  duration={episode.duration}
+                                  autoLoad={false}
+                                />
+                              ))}
+                            </div>
+                          );
+                        }
+                        
+                        return (
+                          <p className="text-gray-500 text-center py-8">
+                            No content available for this date.
+                          </p>
+                        );
+                      })()}
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Compact Calendar for smaller screens */}
+                <div className="lg:hidden">
+                  <CompactCalendar
+                    availableDates={episodes.map(ep => ep.date)}
+                    selectedDate={selectedDate}
+                    onDateSelect={(date) => {
+                      setSelectedDate(date);
+                    }}
+                  />
+                </div>
+              </div>
+            )}
+          </>
         )}
-      </main>
+      />
     </div>
   );
 }

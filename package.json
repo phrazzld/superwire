@@ -18,6 +18,7 @@
     "openai": "^3.1.0",
     "react": "18.2.0",
     "react-dom": "18.2.0",
+    "rss": "^1.2.2",
     "rss-parser": "^3.13.0"
   },
   "devDependencies": {
@@ -26,6 +27,7 @@
     "@types/node": "18.11.3",
     "@types/react": "18.0.21",
     "@types/react-dom": "18.0.6",
+    "@types/rss": "^0.0.32",
     "autoprefixer": "^10.4.12",
     "dotenv": "^17.2.1",
     "postcss": "^8.4.18",

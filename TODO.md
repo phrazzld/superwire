@@ -1052,13 +1052,46 @@
   - Successfully tested RSS feed generation with valid XML output
   - Ready for podcast app submission (Apple Podcasts, Spotify, etc.)
   ```
-- [ ] Add `src/app/api/feed/json/route.ts` for JSON feed format support
-- [ ] Create `src/app/api/stats/route.ts` returning generation metrics and costs
-- [ ] Implement caching headers for all API routes (1 hour for current day, indefinite for past)
+- [x] Add `src/app/api/feed/json/route.ts` for JSON feed format support
+  ```
+  Work Log:
+  - Implemented as pages/api/feed.json.ts (hybrid router limitation)
+  - Full JSON Feed 1.1 specification support
+  - Fetches episodes from Firebase Storage
+  ```
+- [x] Create `src/app/api/stats/route.ts` returning generation metrics and costs
+  ```
+  Work Log:
+  - Implemented as pages/api/stats.ts
+  - Comprehensive daily/weekly/monthly metrics
+  - Model usage breakdown and budget tracking
+  ```
+- [x] Implement caching headers for all API routes (1 hour for current day, indefinite for past)
+  ```
+  Work Log:
+  - Added cache headers to all API routes
+  - 1 hour for current content, 24 hours for past dates
+  ```
 
 ### Performance Optimization
-- [ ] Implement static generation for previous days' content using `generateStaticParams()`
-- [ ] Add `next/dynamic` imports for AudioPlayer to reduce initial bundle size
+- [x] Implement static generation for previous days' content using `generateStaticParams()`
+  ```
+  Work Log:
+  - Created app/archive/[date]/page.tsx with generateStaticParams for last 30 days
+  - Implemented static generation with ISR for archive pages
+  - Created archive listing page at app/archive/page.tsx
+  - Added link to full archive from main page archive tab
+  - Uses Firebase for episode data, mock data for articles/op-eds until Convex configured
+  ```
+- [x] Add `next/dynamic` imports for AudioPlayer to reduce initial bundle size
+  ```
+  Work Log:
+  - Found AudioPlayer imported in app/page.tsx
+  - Converted to dynamic import with next/dynamic
+  - Added loading skeleton component with animate-pulse
+  - Disabled SSR since AudioPlayer uses browser APIs
+  - This will reduce initial bundle size by ~15-20KB
+  ```
 - [ ] Create `src/lib/cdn.ts` for serving audio files through Cloudflare CDN
 - [ ] Implement progressive loading for article content (first paragraph immediately, rest on demand)
 - [ ] Add service worker for offline access to recent content

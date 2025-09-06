@@ -3,7 +3,10 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "test": "jest tests/",
+    "test:watch": "jest tests/ --watch",
+    "test:coverage": "jest tests/ --coverage"
   },
   "dependencies": {
     "@types/js-yaml": "^4.0.9",

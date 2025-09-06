@@ -1,12 +1,29 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import dynamic from "next/dynamic";
 import { storage } from "../pages/_app";
 import { getDownloadURL, ref } from "firebase/storage";
-import AudioPlayer from "./components/AudioPlayer";
 import ArticleCard, { ArticleGrid } from "./components/ArticleCard";
 import ContentTabs, { Tab } from "./components/ContentTabs";
 import CalendarView, { CompactCalendar } from "./components/CalendarView";
+
+// Lazy load AudioPlayer to reduce initial bundle size
+const AudioPlayer = dynamic(
+  () => import("./components/AudioPlayer"),
+  {
+    loading: () => (
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div className="animate-pulse">
+          <div className="h-4 bg-gray-200 rounded w-3/4 mb-4"></div>
+          <div className="h-12 bg-gray-200 rounded mb-2"></div>
+          <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+        </div>
+      </div>
+    ),
+    ssr: false // Disable SSR for AudioPlayer since it uses browser APIs
+  }
+);
 
 // Content type interfaces
 interface Article {
@@ -456,12 +473,20 @@ export default function Home() {
               <div className="space-y-6">
                 <div className="flex items-center justify-between">
                   <h2 className="text-2xl font-bold text-gray-900">Content Archive</h2>
-                  <button
-                    onClick={() => setShowCalendar(!showCalendar)}
-                    className="text-sm text-blue-600 hover:text-blue-700 font-medium"
-                  >
-                    {showCalendar ? "Hide Calendar" : "Show Calendar"}
-                  </button>
+                  <div className="flex items-center gap-4">
+                    <a
+                      href="/archive"
+                      className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                    >
+                      Browse Full Archive →
+                    </a>
+                    <button
+                      onClick={() => setShowCalendar(!showCalendar)}
+                      className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                    >
+                      {showCalendar ? "Hide Calendar" : "Show Calendar"}
+                    </button>
+                  </div>
                 </div>
                 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

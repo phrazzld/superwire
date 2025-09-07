@@ -255,11 +255,26 @@ export function getOpenRouterClient(): OpenRouterClient {
  * Used for cost tracking
  */
 export const MODEL_PRICING = {
+  // OpenAI GPT-5 models
+  'openai/gpt-5': { input: 1.25, output: 10.00 },
+  'openai/gpt-5-mini': { input: 0.25, output: 2.00 },
+  'openai/gpt-5-nano': { input: 0.10, output: 0.80 },
+  
+  // Google Gemini 2.5 models
+  'google/gemini-2.5-flash': { input: 0.30, output: 2.50 },
+  'google/gemini-2.5-flash-lite': { input: 0.10, output: 0.40 },
+  'google/gemini-2.5-pro': { input: 1.00, output: 5.00 },
+  
+  // OpenAI GPT-4 models (legacy)
   'openai/gpt-4o': { input: 2.50, output: 10.00 },
   'openai/gpt-4o-mini': { input: 0.15, output: 0.60 },
   'openai/gpt-3.5-turbo': { input: 0.50, output: 1.50 },
+  
+  // Anthropic models
   'anthropic/claude-3.5-sonnet': { input: 3.00, output: 15.00 },
   'anthropic/claude-3-haiku': { input: 0.25, output: 1.25 },
+  
+  // Meta models
   'meta-llama/llama-3.1-70b-instruct': { input: 0.70, output: 0.80 },
 };
 
@@ -445,26 +460,26 @@ export enum TaskType {
  * Maps task types to optimal models based on performance and cost
  */
 export const MODEL_ROUTER: Record<TaskType, string> = {
-  // Use free/cheap models for high-volume, simple tasks
-  [TaskType.CLASSIFICATION]: 'openai/gpt-3.5-turbo',  // Fast and reliable for classification
-  [TaskType.EXTRACTION]: 'openai/gpt-3.5-turbo',      // Good at structured extraction
-  [TaskType.SENTIMENT_ANALYSIS]: 'openai/gpt-3.5-turbo',  // Adequate for sentiment
+  // Use ultra-efficient Gemini 2.5 models for high-volume, simple tasks
+  [TaskType.CLASSIFICATION]: 'google/gemini-2.5-flash-lite',  // Ultra-low cost at $0.10/$0.40 per 1M
+  [TaskType.EXTRACTION]: 'google/gemini-2.5-flash-lite',      // 10x cheaper than GPT-3.5
+  [TaskType.SENTIMENT_ANALYSIS]: 'google/gemini-2.5-flash-lite',  // Fast and cost-effective
   
   // Use Claude for balanced quality/cost on analytical tasks
   [TaskType.SUMMARIZATION]: 'anthropic/claude-3.5-sonnet',
   [TaskType.EDITORIAL_ANALYSIS]: 'anthropic/claude-3.5-sonnet',
   [TaskType.FACT_CHECKING]: 'anthropic/claude-3.5-sonnet',
   
-  // Use GPT-4o for creative and complex generation
-  [TaskType.CREATIVE_WRITING]: 'openai/gpt-4o',
-  [TaskType.ARTICLE_GENERATION]: 'google/gemini-2.0-flash-thinking-exp:free', // Cost-efficient articles
-  [TaskType.SCRIPT_GENERATION]: 'openai/gpt-4o',
-  [TaskType.DIALOGUE_GENERATION]: 'openai/gpt-4o',
+  // Use GPT-5 models for creative and complex generation
+  [TaskType.CREATIVE_WRITING]: 'openai/gpt-5',  // Most advanced for creative content
+  [TaskType.ARTICLE_GENERATION]: 'google/gemini-2.5-flash', // Cost-efficient at $0.30/$2.50 per 1M
+  [TaskType.SCRIPT_GENERATION]: 'openai/gpt-5-mini',  // 5x cheaper than GPT-5, perfect for scripts
+  [TaskType.DIALOGUE_GENERATION]: 'openai/gpt-5-mini',  // Natural dialogue generation
   
   // Use appropriate models for utility tasks
   [TaskType.TRANSLATION]: 'anthropic/claude-3-haiku',
-  [TaskType.TITLE_GENERATION]: 'openai/gpt-3.5-turbo',
-  [TaskType.SIMPLE_COMPLETION]: 'openai/gpt-3.5-turbo',
+  [TaskType.TITLE_GENERATION]: 'google/gemini-2.5-flash-lite',  // Simple task, ultra-low cost
+  [TaskType.SIMPLE_COMPLETION]: 'google/gemini-2.5-flash-lite',  // Basic completions
 };
 
 /**

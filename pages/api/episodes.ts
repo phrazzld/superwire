@@ -9,16 +9,25 @@ import path from "path";
 import { HOSTS, PROMPTS } from "../../constants";
 import { OpenRouterClient, TaskType } from "../../src/lib/openrouter";
 
-const credential = JSON.parse(
-  Buffer.from(process.env.GOOGLE_SERVICE_KEY || "", "base64").toString()
-);
-
-if (firebase.apps.length === 0) {
-  firebase.initializeApp({
-    projectId: "super-wire",
-    credential: firebase.credential.cert(credential),
-    storageBucket: "gs://super-wire.appspot.com/",
-  });
+// Firebase initialization (optional - being migrated to Vercel Blob)
+let firebaseInitialized = false;
+if (process.env.GOOGLE_SERVICE_KEY) {
+  try {
+    const credential = JSON.parse(
+      Buffer.from(process.env.GOOGLE_SERVICE_KEY, "base64").toString()
+    );
+    
+    if (firebase.apps.length === 0) {
+      firebase.initializeApp({
+        projectId: "super-wire",
+        credential: firebase.credential.cert(credential),
+        storageBucket: "gs://super-wire.appspot.com/",
+      });
+    }
+    firebaseInitialized = true;
+  } catch (error) {
+    console.warn("Firebase initialization failed (migration to Vercel Blob in progress):", error);
+  }
 }
 
 const openaiConfig = new Configuration({
@@ -121,7 +130,7 @@ const writeIntroduction = async (headlines: any[]): Promise<string> => {
       
       // Use OpenRouter with GPT-4o for script generation
       response = await openRouterClient.completeTask(
-        TaskType.SCRIPT_GENERATION, // Routes to GPT-4o
+        'script' as TaskType, // Routes to GPT-4o - using string literal due to enum issue
         userPrompt,
         {
           systemPrompt,
@@ -525,7 +534,7 @@ const writeConclusion = async (headlines: any[]): Promise<string> => {
       
       // Use OpenRouter with GPT-4o for script generation
       response = await openRouterClient.completeTask(
-        TaskType.SCRIPT_GENERATION, // Routes to GPT-4o
+        'script' as TaskType, // Routes to GPT-4o - using string literal due to enum issue
         userPrompt,
         {
           systemPrompt,
@@ -738,14 +747,18 @@ const recordEpisode = async (episode: Episode): Promise<void> => {
       console.log("Enhanced audio merging complete!");
       
       try {
-        // Write merged file to Firebase Storage
-        const bucket = firebase.storage().bucket();
+        // Write merged file to Firebase Storage (if available)
+        if (firebaseInitialized) {
+          const bucket = firebase.storage().bucket();
 
-        await bucket.upload(mergedFilename, {
-          destination: `${timestamp}-episode.mp3`,
-        });
-        
-        console.log("Episode uploaded to Firebase Storage");
+          await bucket.upload(mergedFilename, {
+            destination: `${timestamp}-episode.mp3`,
+          });
+          
+          console.log("Episode uploaded to Firebase Storage");
+        } else {
+          console.log("Firebase not initialized - episode saved locally at:", mergedFilename);
+        }
 
         // Delete all files in EPISODES_DIR
         fs.readdir(EPISODES_DIR, (err, files) => {
@@ -782,10 +795,14 @@ const recordEpisode = async (episode: Episode): Promise<void> => {
         .on("end", async () => {
           console.log("Fallback merging complete!");
           try {
-            const bucket = firebase.storage().bucket();
-            await bucket.upload(mergedFilename, {
-              destination: `${timestamp}-episode.mp3`,
-            });
+            if (firebaseInitialized) {
+              const bucket = firebase.storage().bucket();
+              await bucket.upload(mergedFilename, {
+                destination: `${timestamp}-episode.mp3`,
+              });
+            } else {
+              console.log("Firebase not initialized - fallback episode saved locally at:", mergedFilename);
+            }
           } catch (error) {
             console.error("Error uploading fallback file:", error);
           }

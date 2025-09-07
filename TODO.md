@@ -1092,8 +1092,28 @@
   - Disabled SSR since AudioPlayer uses browser APIs
   - This will reduce initial bundle size by ~15-20KB
   ```
-- [ ] Create `src/lib/cdn.ts` for serving audio files through Cloudflare CDN
-- [ ] Implement progressive loading for article content (first paragraph immediately, rest on demand)
+- [x] Create `src/lib/cdn.ts` for serving audio files through Cloudflare CDN
+  ```
+  Work Log:
+  - Created comprehensive CDN service with support for Cloudflare and Vercel providers
+  - Implemented URL transformation from Firebase/Convex storage to CDN endpoints
+  - Added cache control strategies for different file types (audio, static, dynamic)
+  - Included health check mechanism with fallback to direct URLs
+  - Provided cache purging functionality for Cloudflare
+  - Added helper functions and Express/Next.js middleware for easy integration
+  - Follows existing error handling patterns from error-handler.ts
+  ```
+- [x] Implement progressive loading for article content (first paragraph immediately, rest on demand)
+  ```
+  Work Log:
+  - Created ProgressiveArticle component with Intersection Observer for auto-loading
+  - Implements smart loading: first paragraph immediate, rest on-demand or auto-load
+  - Added API endpoints for split content delivery (/api/articles/[id]/first-paragraph and /remaining-content)
+  - Includes loading states, smooth transitions, and manual "Continue Reading" option
+  - Uses cache headers for CDN optimization (5min for first paragraph, 1hr for remaining)
+  - Provides useProgressiveContent hook for easy integration
+  - Follows existing component patterns from ArticleCard.tsx
+  ```
 - [ ] Add service worker for offline access to recent content
 
 ## Phase 6.5: Critical Migration Path (URGENT - Day 14)
@@ -1104,19 +1124,29 @@
 - [x] Replace lines 519-525 with OpenRouter client pattern from `writeIntroduction()` at lines 102-154 - copy exact pattern including system/user message split
 - [x] Change from `openai.createCompletion({model: "text-davinci-003"})` to `openRouterClient.completeTask(TaskType.SCRIPT_GENERATION)` 
 - [x] Extract response content from `response.content` instead of `response.data.choices[0].text`
-- [ ] Test with `curl -X POST http://localhost:3000/api/episodes` to verify conclusion generation works
-- [ ] Verify cost tracking logs show GPT-4o usage instead of text-davinci-003
+- [x] Test with `curl -X POST http://localhost:3000/api/episodes` to verify conclusion generation works
+  ```
+  Work Log:
+  - Fixed deprecated OpenAI API call by migrating to OpenRouter pattern
+  - Made Firebase initialization optional to prevent blocking errors
+  - Updated OpenRouter API key from placeholder to real key
+  - Fixed "Cannot read properties of undefined (reading 'script')" error
+  - Issue was missing taskTypeTotals property in old costs.json file
+  - Solution: Added taskTypeTotals property to costs.json
+  - Successfully generated conclusion with GPT-4o via OpenRouter
+  ```
+- [x] Verify cost tracking logs show GPT-4o usage instead of text-davinci-003
 
 ### Upgrade to Latest AI Models (GPT-5/Gemini-2.5)
-- [ ] Open `src/lib/openrouter.ts:447-468` and locate `MODEL_ROUTER` configuration mapping TaskType to model names
-- [ ] Replace `openai/gpt-4o` with `openai/gpt-5` for CREATIVE_WRITING task (line 459) - verify exact model ID from OpenRouter docs
-- [ ] Replace `openai/gpt-4o` with `openai/gpt-5-mini` for SCRIPT_GENERATION task (line 461) - 5x cheaper than GPT-5
-- [ ] Replace `openai/gpt-4o` with `openai/gpt-5-mini` for DIALOGUE_GENERATION task (line 462)
-- [ ] Replace `google/gemini-2.0-flash-thinking-exp:free` with `google/gemini-2.5-flash` for ARTICLE_GENERATION (line 460) - $0.0003/$0.0025 per 1M
-- [ ] Replace `openai/gpt-3.5-turbo` with `google/gemini-2.5-flash-lite` for CLASSIFICATION, EXTRACTION, SENTIMENT tasks (lines 449-451) - $0.0001/$0.0004 per 1M
-- [ ] Update `MODEL_PRICING` object at lines 257-264 with new model costs: `'openai/gpt-5': { input: 1.25, output: 10.00 }`, `'openai/gpt-5-mini': { input: 0.25, output: 2.00 }`, `'google/gemini-2.5-flash': { input: 0.30, output: 2.50 }`, `'google/gemini-2.5-flash-lite': { input: 0.10, output: 0.40 }`
-- [ ] Run `npx tsx scripts/test-openrouter.ts` and verify new models are being used in response.model field
-- [ ] Check `costs.json` after test run shows new model names in entries
+- [x] Open `src/lib/openrouter.ts:447-468` and locate `MODEL_ROUTER` configuration mapping TaskType to model names
+- [x] Replace `openai/gpt-4o` with `openai/gpt-5` for CREATIVE_WRITING task (line 459) - verify exact model ID from OpenRouter docs
+- [x] Replace `openai/gpt-4o` with `openai/gpt-5-mini` for SCRIPT_GENERATION task (line 461) - 5x cheaper than GPT-5
+- [x] Replace `openai/gpt-4o` with `openai/gpt-5-mini` for DIALOGUE_GENERATION task (line 462)
+- [x] Replace `google/gemini-2.0-flash-thinking-exp:free` with `google/gemini-2.5-flash` for ARTICLE_GENERATION (line 460) - $0.0003/$0.0025 per 1M
+- [x] Replace `openai/gpt-3.5-turbo` with `google/gemini-2.5-flash-lite` for CLASSIFICATION, EXTRACTION, SENTIMENT tasks (lines 449-451) - $0.0001/$0.0004 per 1M
+- [x] Update `MODEL_PRICING` object at lines 257-264 with new model costs: `'openai/gpt-5': { input: 1.25, output: 10.00 }`, `'openai/gpt-5-mini': { input: 0.25, output: 2.00 }`, `'google/gemini-2.5-flash': { input: 0.30, output: 2.50 }`, `'google/gemini-2.5-flash-lite': { input: 0.10, output: 0.40 }`
+- [x] Run `npx tsx scripts/test-openrouter.ts` and verify new models are being used in response.model field
+- [x] Check `costs.json` after test run shows new model names in entries
 
 ### Implement OpenAI Text-to-Speech Module
 - [ ] Create new file `src/lib/openai-tts.ts` with imports: `import fs from 'fs'`, `import path from 'path'`, existing cost tracking imports from elevenlabs.ts

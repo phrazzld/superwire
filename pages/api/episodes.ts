@@ -504,25 +504,36 @@ const generateFallbackTransition = (
 const writeConclusion = async (headlines: any[]): Promise<string> => {
   console.log("Writing conclusion...");
 
+  // Initialize OpenRouter client
+  const openRouterClient = new OpenRouterClient();
+  
   let retries = 0;
   let response;
 
   while (retries < MAX_RETRIES) {
     try {
-      const prompt = PROMPTS.EP_OUTRO.replace(
+      const basePrompt = PROMPTS.EP_OUTRO.replace(
         "{HEADLINES}",
         headlines.join("\n")
       )
         .replace("{HOST_PERSONALITY}", HOSTS.ADAM.personality)
         .replace("{HOST_NAME}", HOSTS.ADAM.name);
-
-      const maxTokens = getMaxTokens(prompt);
-      response = await openai.createCompletion({
-        model: "text-davinci-003",
-        temperature: 0.7,
-        max_tokens: maxTokens,
-        prompt: prompt,
-      });
+      
+      // Convert to modern chat completion format
+      const systemPrompt = `You are ${HOSTS.ADAM.name}, an expert podcast host with the following personality: ${HOSTS.ADAM.personality}. You are writing the conclusion segment for the Super Wire podcast.`;
+      const userPrompt = basePrompt;
+      
+      // Use OpenRouter with GPT-4o for script generation
+      response = await openRouterClient.completeTask(
+        TaskType.SCRIPT_GENERATION, // Routes to GPT-4o
+        userPrompt,
+        {
+          systemPrompt,
+          temperature: 0.7,
+          maxTokens: 500, // Reasonable limit for podcast conclusion
+          trackCosts: true
+        }
+      );
       break;
     } catch (error: any) {
       console.error(`Error writing conclusion: ${error.message}`);
@@ -535,15 +546,16 @@ const writeConclusion = async (headlines: any[]): Promise<string> => {
     throw new Error(`Failed to write conclusion after ${MAX_RETRIES} retries`);
   }
 
-  if (
-    !response ||
-    !response.data.choices ||
-    response.data.choices.length === 0
-  ) {
-    throw new Error("No intro generated");
+  if (!response || !response.content) {
+    throw new Error("No conclusion generated");
   }
 
-  return response.data.choices[0].text || "";
+  // Log cost information for monitoring
+  if (response.cost) {
+    console.log(`Conclusion generation cost: $${response.cost.toFixed(4)} using ${response.model}`);
+  }
+
+  return response.content;
 };
 
 type Episode = {

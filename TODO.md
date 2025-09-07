@@ -1096,15 +1096,91 @@
 - [ ] Implement progressive loading for article content (first paragraph immediately, rest on demand)
 - [ ] Add service worker for offline access to recent content
 
+## Phase 6.5: Critical Migration Path (URGENT - Day 14)
+*Fix blocking issues and modernize infrastructure before testing.*
+
+### CRITICAL: Fix Deprecated API Blocking Production
+- [x] Open `pages/api/episodes.ts:504-547` and locate `writeConclusion()` function that uses deprecated `openai.createCompletion` with `text-davinci-003`
+- [x] Replace lines 519-525 with OpenRouter client pattern from `writeIntroduction()` at lines 102-154 - copy exact pattern including system/user message split
+- [x] Change from `openai.createCompletion({model: "text-davinci-003"})` to `openRouterClient.completeTask(TaskType.SCRIPT_GENERATION)` 
+- [x] Extract response content from `response.content` instead of `response.data.choices[0].text`
+- [ ] Test with `curl -X POST http://localhost:3000/api/episodes` to verify conclusion generation works
+- [ ] Verify cost tracking logs show GPT-4o usage instead of text-davinci-003
+
+### Upgrade to Latest AI Models (GPT-5/Gemini-2.5)
+- [ ] Open `src/lib/openrouter.ts:447-468` and locate `MODEL_ROUTER` configuration mapping TaskType to model names
+- [ ] Replace `openai/gpt-4o` with `openai/gpt-5` for CREATIVE_WRITING task (line 459) - verify exact model ID from OpenRouter docs
+- [ ] Replace `openai/gpt-4o` with `openai/gpt-5-mini` for SCRIPT_GENERATION task (line 461) - 5x cheaper than GPT-5
+- [ ] Replace `openai/gpt-4o` with `openai/gpt-5-mini` for DIALOGUE_GENERATION task (line 462)
+- [ ] Replace `google/gemini-2.0-flash-thinking-exp:free` with `google/gemini-2.5-flash` for ARTICLE_GENERATION (line 460) - $0.0003/$0.0025 per 1M
+- [ ] Replace `openai/gpt-3.5-turbo` with `google/gemini-2.5-flash-lite` for CLASSIFICATION, EXTRACTION, SENTIMENT tasks (lines 449-451) - $0.0001/$0.0004 per 1M
+- [ ] Update `MODEL_PRICING` object at lines 257-264 with new model costs: `'openai/gpt-5': { input: 1.25, output: 10.00 }`, `'openai/gpt-5-mini': { input: 0.25, output: 2.00 }`, `'google/gemini-2.5-flash': { input: 0.30, output: 2.50 }`, `'google/gemini-2.5-flash-lite': { input: 0.10, output: 0.40 }`
+- [ ] Run `npx tsx scripts/test-openrouter.ts` and verify new models are being used in response.model field
+- [ ] Check `costs.json` after test run shows new model names in entries
+
+### Implement OpenAI Text-to-Speech Module
+- [ ] Create new file `src/lib/openai-tts.ts` with imports: `import fs from 'fs'`, `import path from 'path'`, existing cost tracking imports from elevenlabs.ts
+- [ ] Define `OPENAI_TTS_API_BASE = 'https://api.openai.com/v1/audio/speech'` constant
+- [ ] Define `OPENAI_TTS_COST_PER_MILLION = 15.00` for standard model, `30.00` for HD model
+- [ ] Create `VoiceType = 'alloy' | 'echo' | 'fable' | 'onyx' | 'nova' | 'shimmer'` type definition
+- [ ] Create `TTSModel = 'tts-1' | 'tts-1-hd'` type for quality selection
+- [ ] Define `HOST_TO_VOICE_MAP` object: `{ ADAM: 'onyx', DALLAS: 'nova', JORDAN: 'echo' }` for consistent host voices
+- [ ] Implement `generateSpeech(text: string, voice: VoiceType, model: TTSModel = 'tts-1', speed: number = 1.0)` function with fetch to OpenAI API
+- [ ] Add proper Authorization header using `process.env.OPENAI_API_KEY` from ~/.secrets
+- [ ] Return audio buffer from response.arrayBuffer() and handle errors with retry logic (copy pattern from elevenlabs.ts:390-420)
+- [ ] Implement `estimateTTSCost(text: string, model: TTSModel)` calculating `text.length * (model === 'tts-1-hd' ? 30 : 15) / 1_000_000`
+- [ ] Create `generateAudioForHost(text: string, hostName: string, quality: 'standard' | 'hd' = 'standard')` mapping host to voice and model
+- [ ] Add `trackTTSUsage(text: string, model: TTSModel, voice: VoiceType)` updating costs.json with new `ttsCosts` section
+- [ ] Implement `shouldUseTTS()` checking if `process.env.OPENAI_API_KEY` exists and daily TTS costs < $0.50
+- [ ] Create test script `scripts/test-openai-tts.ts` generating sample audio for each voice (15-30 words each)
+- [ ] Verify audio files are created in `tmp/tts_test/` directory with proper MP3 format
+
+### Replace ElevenLabs with OpenAI TTS in Episode Generation
+- [ ] Open `pages/api/episodes.ts:599-620` and locate intro audio generation using ElevenLabs
+- [ ] Import `generateAudioForHost` from new `src/lib/openai-tts.ts` module at top of file
+- [ ] Replace fetch to `TEXT_TO_SPEECH_BASE_ENDPOINT` with `generateAudioForHost(intro, 'ADAM', 'hd')` for intro
+- [ ] Update segments loop at lines 625-655 to use `generateAudioForHost(segment, hostName, 'standard')` 
+- [ ] Replace conclusion audio generation at lines 657-680 with `generateAudioForHost(conclusion, 'ADAM', 'hd')`
+- [ ] Update cost tracking to use OpenAI TTS costs instead of ElevenLabs costs
+- [ ] Keep ElevenLabs as fallback - wrap new code in `if (shouldUseTTS()) { ... } else { /* existing ElevenLabs code */ }`
+- [ ] Test full episode generation with `curl -X POST http://localhost:3000/api/episodes`
+- [ ] Verify audio files are created and cost is ~12x lower ($0.015 per 1000 chars vs $0.18)
+
+### Migrate Storage from Firebase to Vercel Blob
+- [ ] Run `yarn add @vercel/blob` to install Vercel Blob Storage SDK (currently version 1.1.1)
+- [ ] Create `src/lib/vercel-blob.ts` with `import { put, del, list, head } from '@vercel/blob'`
+- [ ] Add `BLOB_READ_WRITE_TOKEN` to `.env.local` from Vercel dashboard (format: `vercel_blob_rw_xxx`)
+- [ ] Implement `uploadEpisodeToBlob(audioBuffer: Buffer, filename: string)` using `put()` with path `episodes/${filename}`
+- [ ] Set `cacheControlMaxAge: 31536000` (1 year) and `access: 'public'` in put options
+- [ ] Return blob.url from successful upload (CDN-backed URL)
+- [ ] Create `listEpisodes(limit: number = 100)` using `list({ prefix: 'episodes/', limit })` 
+- [ ] Implement `deleteEpisode(url: string)` using `del(url)` for cleanup
+- [ ] Add `getEpisodeMetadata(url: string)` using `head(url)` for size/upload date
+- [ ] Update `pages/api/episodes.ts:732-735` replacing Firebase bucket.upload with `uploadEpisodeToBlob()`
+- [ ] Change upload destination from `${timestamp}-episode.mp3` to just use filename directly
+- [ ] Update `app/components/AudioPlayer.tsx:35-55` to use Vercel Blob URLs directly (no Firebase resolution needed)
+- [ ] Remove Firebase initialization from `pages/_app.tsx:10-22` - delete firebaseConfig and initializeApp
+- [ ] Test upload with generated episode and verify URL works in AudioPlayer component
+- [ ] Add migration script `scripts/migrate-firebase-to-blob.ts` if existing episodes need migration
+
+### Update Environment Configuration
+- [ ] Add `BLOB_READ_WRITE_TOKEN=vercel_blob_rw_xxx` to `.env.local` (get from Vercel dashboard > Storage)
+- [ ] Verify `OPENAI_API_KEY=sk-proj-xxx` exists in `.env.local` (copy from ~/.secrets if needed)
+- [ ] Verify `OPENROUTER_API_KEY=sk-or-v1-xxx` exists in `.env.local` (copy from ~/.secrets)
+- [ ] Remove `ELEVEN_LABS_API_KEY` from required variables (now optional fallback)
+- [ ] Remove `GOOGLE_SERVICE_KEY` from required variables (Firebase deprecated)
+- [ ] Update `.env.example` with new required variables and removal of deprecated ones
+- [ ] Add comments explaining which services each API key is for
+
 ## Phase 7: Testing & Quality Assurance (Day 15)
 *Ensure it works reliably before going live.*
 
 ### Integration Tests
 - [ ] Write `tests/ingestion.test.ts` validating news fetching from all configured sources
 - [ ] Create `tests/generation.test.ts` checking each content type generates successfully
-- [ ] Implement `tests/costs.test.ts` verifying cost calculations match expected ranges
+- [ ] Implement `tests/costs.test.ts` verifying cost calculations match expected ranges - verify new model costs are 40-125x lower
 - [ ] Add `tests/editorial.test.ts` confirming editorial DNA properly filters and ranks content
-- [ ] Write `tests/convex.test.ts` validating all database operations
+- [ ] Write `tests/storage.test.ts` validating Vercel Blob operations (upload, list, delete)
 
 ### Quality Checks
 - [ ] Implement `src/lib/quality.ts` with `checkContentQuality(text)` for grammar, readability, factual claims

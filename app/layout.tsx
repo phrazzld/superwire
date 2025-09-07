@@ -1,4 +1,5 @@
 import "../styles/globals.css";
+import { ServiceWorkerProvider } from "./hooks/useServiceWorker";
 
 export default function RootLayout({
   children,
@@ -8,7 +9,11 @@ export default function RootLayout({
   return (
     <html>
       <head />
-      <body>{children}</body>
+      <body>
+        <ServiceWorkerProvider>
+          {children}
+        </ServiceWorkerProvider>
+      </body>
     </html>
   )
 }

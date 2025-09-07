@@ -1114,7 +1114,19 @@
   - Provides useProgressiveContent hook for easy integration
   - Follows existing component patterns from ArticleCard.tsx
   ```
-- [ ] Add service worker for offline access to recent content
+- [x] Add service worker for offline access to recent content
+  ```
+  Work Log:
+  - Created comprehensive service worker (public/sw.js) with multiple caching strategies
+  - Implements network-first for API routes, cache-first for static assets
+  - Stale-while-revalidate strategy for images
+  - Created offline fallback page embedded in service worker
+  - Added useServiceWorker hook for registration and management
+  - ServiceWorkerProvider component handles updates and offline indicators
+  - Integrated into app/layout.tsx for automatic registration
+  - Supports background sync for content updates
+  - Provides cache management via postMessage API
+  ```
 
 ## Phase 6.5: Critical Migration Path (URGENT - Day 14)
 *Fix blocking issues and modernize infrastructure before testing.*
@@ -1149,21 +1161,32 @@
 - [x] Check `costs.json` after test run shows new model names in entries
 
 ### Implement OpenAI Text-to-Speech Module
-- [ ] Create new file `src/lib/openai-tts.ts` with imports: `import fs from 'fs'`, `import path from 'path'`, existing cost tracking imports from elevenlabs.ts
-- [ ] Define `OPENAI_TTS_API_BASE = 'https://api.openai.com/v1/audio/speech'` constant
-- [ ] Define `OPENAI_TTS_COST_PER_MILLION = 15.00` for standard model, `30.00` for HD model
-- [ ] Create `VoiceType = 'alloy' | 'echo' | 'fable' | 'onyx' | 'nova' | 'shimmer'` type definition
-- [ ] Create `TTSModel = 'tts-1' | 'tts-1-hd'` type for quality selection
-- [ ] Define `HOST_TO_VOICE_MAP` object: `{ ADAM: 'onyx', DALLAS: 'nova', JORDAN: 'echo' }` for consistent host voices
-- [ ] Implement `generateSpeech(text: string, voice: VoiceType, model: TTSModel = 'tts-1', speed: number = 1.0)` function with fetch to OpenAI API
-- [ ] Add proper Authorization header using `process.env.OPENAI_API_KEY` from ~/.secrets
-- [ ] Return audio buffer from response.arrayBuffer() and handle errors with retry logic (copy pattern from elevenlabs.ts:390-420)
-- [ ] Implement `estimateTTSCost(text: string, model: TTSModel)` calculating `text.length * (model === 'tts-1-hd' ? 30 : 15) / 1_000_000`
-- [ ] Create `generateAudioForHost(text: string, hostName: string, quality: 'standard' | 'hd' = 'standard')` mapping host to voice and model
-- [ ] Add `trackTTSUsage(text: string, model: TTSModel, voice: VoiceType)` updating costs.json with new `ttsCosts` section
-- [ ] Implement `shouldUseTTS()` checking if `process.env.OPENAI_API_KEY` exists and daily TTS costs < $0.50
-- [ ] Create test script `scripts/test-openai-tts.ts` generating sample audio for each voice (15-30 words each)
+- [x] Create new file `src/lib/openai-tts.ts` with imports: `import fs from 'fs'`, `import path from 'path'`, existing cost tracking imports from elevenlabs.ts
+- [x] Define `OPENAI_TTS_API_BASE = 'https://api.openai.com/v1/audio/speech'` constant
+- [x] Define `OPENAI_TTS_COST_PER_MILLION = 15.00` for standard model, `30.00` for HD model
+- [x] Create `VoiceType = 'alloy' | 'echo' | 'fable' | 'onyx' | 'nova' | 'shimmer'` type definition
+- [x] Create `TTSModel = 'tts-1' | 'tts-1-hd'` type for quality selection
+- [x] Define `HOST_TO_VOICE_MAP` object: `{ ADAM: 'onyx', DALLAS: 'nova', JORDAN: 'echo' }` for consistent host voices
+- [x] Implement `generateSpeech(text: string, voice: VoiceType, model: TTSModel = 'tts-1', speed: number = 1.0)` function with fetch to OpenAI API
+- [x] Add proper Authorization header using `process.env.OPENAI_API_KEY` from ~/.secrets
+- [x] Return audio buffer from response.arrayBuffer() and handle errors with retry logic (copy pattern from elevenlabs.ts:390-420)
+- [x] Implement `estimateTTSCost(text: string, model: TTSModel)` calculating `text.length * (model === 'tts-1-hd' ? 30 : 15) / 1_000_000`
+- [x] Create `generateAudioForHost(text: string, hostName: string, quality: 'standard' | 'hd' = 'standard')` mapping host to voice and model
+- [x] Add `trackTTSUsage(text: string, model: TTSModel, voice: VoiceType)` updating costs.json with new `ttsCosts` section
+- [x] Implement `shouldUseTTS()` checking if `process.env.OPENAI_API_KEY` exists and daily TTS costs < $0.50
+- [x] Create test script `scripts/test-openai-tts.ts` generating sample audio for each voice (15-30 words each)
 - [ ] Verify audio files are created in `tmp/tts_test/` directory with proper MP3 format
+  ```
+  Work Log:
+  - Created comprehensive OpenAI TTS module following elevenlabs.ts patterns
+  - Implemented all required functions with proper TypeScript types
+  - Added retry logic with exponential backoff (1s/2s/4s delays)
+  - Integrated cost tracking with separate ttsCosts section in costs.json
+  - Daily budget enforcement at $0.50 limit
+  - Created test script with individual voice tests and host mapping tests
+  - Provides 12x cost savings compared to ElevenLabs ($15 vs $180 per 1M chars)
+  - Ready for integration into episode generation pipeline
+  ```
 
 ### Replace ElevenLabs with OpenAI TTS in Episode Generation
 - [ ] Open `pages/api/episodes.ts:599-620` and locate intro audio generation using ElevenLabs

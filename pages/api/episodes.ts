@@ -8,6 +8,8 @@ import { Configuration, OpenAIApi } from "openai";
 import path from "path";
 import { HOSTS, PROMPTS } from "../../constants";
 import { OpenRouterClient, TaskType } from "../../src/lib/openrouter";
+import { generateAudioForHost, shouldUseTTS } from "../../src/lib/openai-tts";
+import { uploadEpisodeToBlob, isBlobStorageConfigured } from "../../src/lib/vercel-blob";
 
 // Firebase initialization (optional - being migrated to Vercel Blob)
 let firebaseInitialized = false;
@@ -618,21 +620,36 @@ const recordEpisode = async (episode: Episode): Promise<void> => {
   const timestamp = new Date().toISOString();
 
   // Process intro
-  const introRes = await fetch(
-    `${TEXT_TO_SPEECH_BASE_ENDPOINT}/${HOSTS.ADAM.voiceId}`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "xi-api-key": process.env.ELEVEN_LABS_API_KEY,
-      } as HeadersInit,
-      body: JSON.stringify({
-        text: intro,
-      }),
+  let introData: ArrayBuffer;
+  
+  if (shouldUseTTS()) {
+    // Use OpenAI TTS (12x cheaper)
+    console.log("Using OpenAI TTS for intro generation");
+    const result = await generateAudioForHost(intro, 'ADAM', 'hd');
+    if (result.success && result.audioBuffer) {
+      introData = result.audioBuffer.buffer;
+      console.log(`Intro generated with OpenAI TTS: ${result.characterCount} chars, $${result.cost?.toFixed(4)}`);
+    } else {
+      throw new Error(`Failed to generate intro audio: ${result.error}`);
     }
-  );
-
-  const introData = await introRes.arrayBuffer();
+  } else {
+    // Fallback to ElevenLabs
+    console.log("Using ElevenLabs for intro generation");
+    const introRes = await fetch(
+      `${TEXT_TO_SPEECH_BASE_ENDPOINT}/${HOSTS.ADAM.voiceId}`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "xi-api-key": process.env.ELEVEN_LABS_API_KEY,
+        } as HeadersInit,
+        body: JSON.stringify({
+          text: intro,
+        }),
+      }
+    );
+    introData = await introRes.arrayBuffer();
+  }
 
   // Generate filename
   let filename = `${timestamp}-00-intro.mp3`;
@@ -645,22 +662,38 @@ const recordEpisode = async (episode: Episode): Promise<void> => {
   // Process segments
   // TODO: Alternate segments between hosts Adam, Domi, Arnold, Elli, maybe Bella and Antoni
   for (let i = 0; i < segments.length; i++) {
-    const hostEndpoint =
-      i % 2 === 0
-        ? `${TEXT_TO_SPEECH_BASE_ENDPOINT}/${HOSTS.DALLAS.voiceId}`
-        : `${TEXT_TO_SPEECH_BASE_ENDPOINT}/${HOSTS.JORDAN.voiceId}`;
-    const segmentRes = await fetch(hostEndpoint, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "xi-api-key": process.env.ELEVEN_LABS_API_KEY,
-      } as HeadersInit,
-      body: JSON.stringify({
-        text: segments[i],
-      }),
-    });
-
-    const segmentData = await segmentRes.arrayBuffer();
+    let segmentData: ArrayBuffer;
+    const hostName = i % 2 === 0 ? 'DALLAS' : 'JORDAN';
+    
+    if (shouldUseTTS()) {
+      // Use OpenAI TTS (12x cheaper)
+      console.log(`Using OpenAI TTS for segment ${i + 1} with host ${hostName}`);
+      const result = await generateAudioForHost(segments[i], hostName, 'standard');
+      if (result.success && result.audioBuffer) {
+        segmentData = result.audioBuffer.buffer;
+        console.log(`Segment ${i + 1} generated with OpenAI TTS: ${result.characterCount} chars, $${result.cost?.toFixed(4)}`);
+      } else {
+        throw new Error(`Failed to generate segment ${i + 1} audio: ${result.error}`);
+      }
+    } else {
+      // Fallback to ElevenLabs
+      console.log(`Using ElevenLabs for segment ${i + 1}`);
+      const hostEndpoint =
+        i % 2 === 0
+          ? `${TEXT_TO_SPEECH_BASE_ENDPOINT}/${HOSTS.DALLAS.voiceId}`
+          : `${TEXT_TO_SPEECH_BASE_ENDPOINT}/${HOSTS.JORDAN.voiceId}`;
+      const segmentRes = await fetch(hostEndpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "xi-api-key": process.env.ELEVEN_LABS_API_KEY,
+        } as HeadersInit,
+        body: JSON.stringify({
+          text: segments[i],
+        }),
+      });
+      segmentData = await segmentRes.arrayBuffer();
+    }
 
     // Generate filename
     filename = `${timestamp}-0${i}-segment.mp3`;
@@ -676,21 +709,36 @@ const recordEpisode = async (episode: Episode): Promise<void> => {
   }
 
   // Process conclusion
-  const conclusionRes = await fetch(
-    `${TEXT_TO_SPEECH_BASE_ENDPOINT}/${HOSTS.ADAM.voiceId}`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "xi-api-key": process.env.ELEVEN_LABS_API_KEY,
-      } as HeadersInit,
-      body: JSON.stringify({
-        text: conclusion,
-      }),
+  let conclusionData: ArrayBuffer;
+  
+  if (shouldUseTTS()) {
+    // Use OpenAI TTS (12x cheaper)
+    console.log("Using OpenAI TTS for conclusion generation");
+    const result = await generateAudioForHost(conclusion, 'ADAM', 'hd');
+    if (result.success && result.audioBuffer) {
+      conclusionData = result.audioBuffer.buffer;
+      console.log(`Conclusion generated with OpenAI TTS: ${result.characterCount} chars, $${result.cost?.toFixed(4)}`);
+    } else {
+      throw new Error(`Failed to generate conclusion audio: ${result.error}`);
     }
-  );
-
-  const conclusionData = await conclusionRes.arrayBuffer();
+  } else {
+    // Fallback to ElevenLabs
+    console.log("Using ElevenLabs for conclusion generation");
+    const conclusionRes = await fetch(
+      `${TEXT_TO_SPEECH_BASE_ENDPOINT}/${HOSTS.ADAM.voiceId}`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "xi-api-key": process.env.ELEVEN_LABS_API_KEY,
+        } as HeadersInit,
+        body: JSON.stringify({
+          text: conclusion,
+        }),
+      }
+    );
+    conclusionData = await conclusionRes.arrayBuffer();
+  }
 
   // Generate filename
   filename = `${timestamp}-99-conclusion.mp3`;
@@ -747,17 +795,36 @@ const recordEpisode = async (episode: Episode): Promise<void> => {
       console.log("Enhanced audio merging complete!");
       
       try {
-        // Write merged file to Firebase Storage (if available)
-        if (firebaseInitialized) {
+        // Upload to Vercel Blob Storage (preferred) or Firebase (fallback)
+        if (isBlobStorageConfigured()) {
+          // Read the merged file
+          const audioBuffer = await fs.promises.readFile(mergedFilename);
+          const episodeFilename = `episode-${timestamp}.mp3`;
+          
+          const result = await uploadEpisodeToBlob(audioBuffer, episodeFilename);
+          
+          if (result.success) {
+            console.log("Episode uploaded to Vercel Blob Storage:", result.url);
+          } else {
+            console.error("Failed to upload to Vercel Blob:", result.error);
+            // Fall through to Firebase fallback if available
+            if (firebaseInitialized) {
+              const bucket = firebase.storage().bucket();
+              await bucket.upload(mergedFilename, {
+                destination: `${timestamp}-episode.mp3`,
+              });
+              console.log("Episode uploaded to Firebase Storage (fallback)");
+            }
+          }
+        } else if (firebaseInitialized) {
+          // Fallback to Firebase if Vercel Blob not configured
           const bucket = firebase.storage().bucket();
-
           await bucket.upload(mergedFilename, {
             destination: `${timestamp}-episode.mp3`,
           });
-          
           console.log("Episode uploaded to Firebase Storage");
         } else {
-          console.log("Firebase not initialized - episode saved locally at:", mergedFilename);
+          console.log("No storage configured - episode saved locally at:", mergedFilename);
         }
 
         // Delete all files in EPISODES_DIR
@@ -795,7 +862,24 @@ const recordEpisode = async (episode: Episode): Promise<void> => {
         .on("end", async () => {
           console.log("Fallback merging complete!");
           try {
-            if (firebaseInitialized) {
+            // Upload to Vercel Blob Storage (preferred) or Firebase (fallback)
+            if (isBlobStorageConfigured()) {
+              const audioBuffer = await fs.promises.readFile(mergedFilename);
+              const episodeFilename = `episode-${timestamp}.mp3`;
+              
+              const result = await uploadEpisodeToBlob(audioBuffer, episodeFilename);
+              
+              if (result.success) {
+                console.log("Episode uploaded to Vercel Blob Storage:", result.url);
+              } else if (firebaseInitialized) {
+                // Fallback to Firebase if Blob upload fails
+                const bucket = firebase.storage().bucket();
+                await bucket.upload(mergedFilename, {
+                  destination: `${timestamp}-episode.mp3`,
+                });
+                console.log("Episode uploaded to Firebase Storage (fallback)");
+              }
+            } else if (firebaseInitialized) {
               const bucket = firebase.storage().bucket();
               await bucket.upload(mergedFilename, {
                 destination: `${timestamp}-episode.mp3`,

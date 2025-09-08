@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@types/js-yaml": "^4.0.9",
+    "@vercel/blob": "^1.1.1",
     "cheerio": "^1.0.0-rc.12",
     "convex": "^1.26.2",
     "encoding": "^0.1.13",

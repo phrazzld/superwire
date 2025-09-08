@@ -1,8 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { getDownloadURL, ref } from "firebase/storage";
-import { storage } from "../../pages/_app";
+import { getCDNUrlWithFallback } from "../../src/lib/cdn";
 
 interface AudioPlayerProps {
   episodeName: string;
@@ -33,7 +32,7 @@ export default function AudioPlayer({
   const [hasError, setHasError] = useState(false);
   const [isBuffering, setIsBuffering] = useState(false);
 
-  // Load audio URL from Firebase
+  // Load audio URL (now direct URL from Vercel Blob or Firebase)
   useEffect(() => {
     const loadAudioUrl = async () => {
       if (!episodeUrl || !autoLoad) return;
@@ -42,12 +41,16 @@ export default function AudioPlayer({
       setHasError(false);
       
       try {
-        const pathReference = ref(storage, episodeUrl);
-        const url = await getDownloadURL(pathReference);
+        // episodeUrl is now a direct URL from Vercel Blob or Firebase
+        // Optionally enhance with CDN for better performance
+        const url = await getCDNUrlWithFallback(episodeUrl, {
+          fileType: 'audio'
+        });
         setAudioSrc(url);
       } catch (error) {
         console.error("Error loading audio:", error);
-        setHasError(true);
+        // If CDN enhancement fails, use the direct URL
+        setAudioSrc(episodeUrl);
       } finally {
         setIsLoading(false);
       }
@@ -142,18 +145,23 @@ export default function AudioPlayer({
     if (!audioSrc && episodeUrl) {
       setIsLoading(true);
       try {
-        const pathReference = ref(storage, episodeUrl);
-        const url = await getDownloadURL(pathReference);
+        // episodeUrl is now a direct URL from Vercel Blob or Firebase
+        // Optionally enhance with CDN for better performance
+        const url = await getCDNUrlWithFallback(episodeUrl, {
+          fileType: 'audio'
+        });
         setAudioSrc(url);
         audioRef.current.src = url;
         await audioRef.current.load();
       } catch (error) {
         console.error("Error loading audio:", error);
-        setHasError(true);
+        // If CDN enhancement fails, use the direct URL
+        setAudioSrc(episodeUrl);
+        audioRef.current.src = episodeUrl;
+        await audioRef.current.load();
+      } finally {
         setIsLoading(false);
-        return;
       }
-      setIsLoading(false);
     }
 
     if (isPlaying) {

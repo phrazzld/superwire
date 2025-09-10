@@ -1,6 +1,5 @@
 // Next.js API route support: https://nextjs.org/docs/api-routes/introduction
 import * as cheerio from "cheerio";
-import firebase from "firebase-admin";
 import ffmpeg from "fluent-ffmpeg";
 import fs from "fs";
 import type { NextApiRequest, NextApiResponse } from "next";
@@ -9,28 +8,9 @@ import path from "path";
 import { HOSTS, PROMPTS } from "../../constants";
 import { OpenRouterClient, TaskType } from "../../src/lib/openrouter";
 import { generateAudioForHost, shouldUseTTS } from "../../src/lib/openai-tts";
-import { uploadEpisodeToBlob, isBlobStorageConfigured } from "../../src/lib/vercel-blob";
+import { uploadEpisodeToBlob, isBlobStorageConfigured, getAllEpisodes } from "../../src/lib/vercel-blob";
 
-// Firebase initialization (optional - being migrated to Vercel Blob)
-let firebaseInitialized = false;
-if (process.env.GOOGLE_SERVICE_KEY) {
-  try {
-    const credential = JSON.parse(
-      Buffer.from(process.env.GOOGLE_SERVICE_KEY, "base64").toString()
-    );
-    
-    if (firebase.apps.length === 0) {
-      firebase.initializeApp({
-        projectId: "super-wire",
-        credential: firebase.credential.cert(credential),
-        storageBucket: "gs://super-wire.appspot.com/",
-      });
-    }
-    firebaseInitialized = true;
-  } catch (error) {
-    console.warn("Firebase initialization failed (migration to Vercel Blob in progress):", error);
-  }
-}
+// Firebase removed - using Vercel Blob Storage exclusively
 
 const openaiConfig = new Configuration({
   apiKey: process.env.OPENAI_API_KEY,
@@ -795,7 +775,7 @@ const recordEpisode = async (episode: Episode): Promise<void> => {
       console.log("Enhanced audio merging complete!");
       
       try {
-        // Upload to Vercel Blob Storage (preferred) or Firebase (fallback)
+        // Upload to Vercel Blob Storage
         if (isBlobStorageConfigured()) {
           // Read the merged file
           const audioBuffer = await fs.promises.readFile(mergedFilename);
@@ -807,24 +787,11 @@ const recordEpisode = async (episode: Episode): Promise<void> => {
             console.log("Episode uploaded to Vercel Blob Storage:", result.url);
           } else {
             console.error("Failed to upload to Vercel Blob:", result.error);
-            // Fall through to Firebase fallback if available
-            if (firebaseInitialized) {
-              const bucket = firebase.storage().bucket();
-              await bucket.upload(mergedFilename, {
-                destination: `${timestamp}-episode.mp3`,
-              });
-              console.log("Episode uploaded to Firebase Storage (fallback)");
-            }
+            throw new Error(`Upload failed: ${result.error}`);
           }
-        } else if (firebaseInitialized) {
-          // Fallback to Firebase if Vercel Blob not configured
-          const bucket = firebase.storage().bucket();
-          await bucket.upload(mergedFilename, {
-            destination: `${timestamp}-episode.mp3`,
-          });
-          console.log("Episode uploaded to Firebase Storage");
         } else {
-          console.log("No storage configured - episode saved locally at:", mergedFilename);
+          console.error("Vercel Blob storage not configured - cannot save episode");
+          throw new Error("Storage not configured");
         }
 
         // Delete all files in EPISODES_DIR
@@ -862,7 +829,7 @@ const recordEpisode = async (episode: Episode): Promise<void> => {
         .on("end", async () => {
           console.log("Fallback merging complete!");
           try {
-            // Upload to Vercel Blob Storage (preferred) or Firebase (fallback)
+            // Upload to Vercel Blob Storage
             if (isBlobStorageConfigured()) {
               const audioBuffer = await fs.promises.readFile(mergedFilename);
               const episodeFilename = `episode-${timestamp}.mp3`;
@@ -871,21 +838,11 @@ const recordEpisode = async (episode: Episode): Promise<void> => {
               
               if (result.success) {
                 console.log("Episode uploaded to Vercel Blob Storage:", result.url);
-              } else if (firebaseInitialized) {
-                // Fallback to Firebase if Blob upload fails
-                const bucket = firebase.storage().bucket();
-                await bucket.upload(mergedFilename, {
-                  destination: `${timestamp}-episode.mp3`,
-                });
-                console.log("Episode uploaded to Firebase Storage (fallback)");
+              } else {
+                console.error("Failed to upload fallback episode to Vercel Blob:", result.error);
               }
-            } else if (firebaseInitialized) {
-              const bucket = firebase.storage().bucket();
-              await bucket.upload(mergedFilename, {
-                destination: `${timestamp}-episode.mp3`,
-              });
             } else {
-              console.log("Firebase not initialized - fallback episode saved locally at:", mergedFilename);
+              console.error("Vercel Blob storage not configured - fallback episode saved locally at:", mergedFilename);
             }
           } catch (error) {
             console.error("Error uploading fallback file:", error);
@@ -974,22 +931,28 @@ const handlePost = async (req: NextApiRequest, res: NextApiResponse) => {
   }
 };
 
-// Get all of the mp3 files in the public directory
+// Get all episodes from Vercel Blob Storage
 const handleGet = async (req: NextApiRequest, res: NextApiResponse) => {
   console.log("Handling GET request");
 
-  // Get episodes from Firebase Storage
-  const bucket = firebase.storage().bucket();
-  const [files] = await bucket.getFiles();
+  try {
+    // Get episodes from Vercel Blob Storage
+    const episodesList = await getAllEpisodes();
+    
+    const episodes = episodesList.map((episode) => {
+      return {
+        name: episode.pathname.replace('episodes/', ''),
+        url: episode.url,
+        size: episode.size,
+        uploadedAt: episode.uploadedAt
+      };
+    });
 
-  const episodes = files.map((file) => {
-    return {
-      name: file.name,
-      url: `https://storage.googleapis.com/${bucket.name}/${file.name}`,
-    };
-  });
-
-  res.status(200).json({ episodes });
+    res.status(200).json({ episodes });
+  } catch (error) {
+    console.error('Error fetching episodes:', error);
+    res.status(500).json({ error: 'Failed to fetch episodes' });
+  }
 };
 
 export default function handler(req: NextApiRequest, res: NextApiResponse) {

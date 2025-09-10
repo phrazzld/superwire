@@ -1,6 +1,5 @@
 import { NextApiRequest, NextApiResponse } from "next";
-import { getDownloadURL, ref, list } from "firebase/storage";
-// Firebase storage removed - using Vercel Blob Storage
+import { getAllEpisodes } from "../../../src/lib/vercel-blob";
 
 // Content type interfaces (matching app/page.tsx)
 interface Article {
@@ -56,10 +55,26 @@ function isValidDateFormat(date: string): boolean {
 
 // Fetch episodes from Vercel Blob Storage for the date
 async function fetchEpisodesForDate(date: string): Promise<Episode[]> {
-  // TODO: Implement Vercel Blob storage fetching
-  // Firebase storage has been deprecated in favor of Vercel Blob
-  // For now, returning empty array until Blob storage is configured
-  return [];
+  try {
+    const allEpisodes = await getAllEpisodes();
+    
+    // Filter episodes by date
+    return allEpisodes
+      .filter(episode => {
+        const fileName = episode.pathname.replace('episodes/', '');
+        const episodeDate = fileName.replace('episode-', '').replace('.mp3', '');
+        return episodeDate.startsWith(date);
+      })
+      .map(episode => ({
+        name: episode.pathname.replace('episodes/', ''),
+        url: episode.url,
+        date: episode.pathname.replace('episodes/', '').replace('episode-', '').replace('.mp3', ''),
+        duration: 1200 // Default 20 minutes
+      }));
+  } catch (error) {
+    console.error('Error fetching episodes for date:', error);
+    return [];
+  }
 }
 
 // Generate mock data for demonstration
@@ -144,7 +159,7 @@ function generateMockContent(date: string): ContentByDate {
     articles,
     opeds,
     brief,
-    episodes: [] // Episodes will be fetched from Firebase
+    episodes: [] // Episodes will be fetched from Vercel Blob
   };
 }
 

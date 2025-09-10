@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import * as admin from 'firebase-admin';
+import { getAllEpisodes } from '../../src/lib/vercel-blob';
 
 // JSON Feed specification: https://www.jsonfeed.org/version/1.1/
 interface JSONFeed {
@@ -44,67 +44,37 @@ export default async function handler(
   }
 
   try {
-    // Initialize Firebase admin if not already initialized
-    if (!admin.apps.length) {
-      const serviceAccountKey = process.env.GOOGLE_SERVICE_KEY;
-      if (serviceAccountKey) {
-        const serviceAccount = JSON.parse(
-          Buffer.from(serviceAccountKey, "base64").toString("utf-8")
-        );
-        admin.initializeApp({
-          credential: admin.credential.cert(serviceAccount),
-          storageBucket: "gs://super-wire.appspot.com/",
-        });
-      }
-    }
-    const bucket = admin.storage().bucket();
-
-    // Get episodes from Firebase Storage
-    const [files] = await bucket.getFiles({ prefix: 'episodes/' });
+    // Get episodes from Vercel Blob Storage
+    const episodesList = await getAllEpisodes();
     
-    const episodes = await Promise.all(
-      files
-        .filter(file => file.name.endsWith('.mp3'))
-        .sort((a, b) => {
-          const dateA = a.metadata.timeCreated || '';
-          const dateB = b.metadata.timeCreated || '';
-          return new Date(dateB).getTime() - new Date(dateA).getTime();
-        })
-        .slice(0, 50) // Last 50 episodes
-        .map(async (file) => {
-          const fileName = file.name.split('/').pop() || '';
-          const episodeDate = fileName.replace('episode-', '').replace('.mp3', '');
-          const formattedDate = new Date(episodeDate).toISOString();
-          
-          // Get file metadata
-          const [metadata] = await file.getMetadata();
-          const fileSize = parseInt(metadata.size || '0');
-          
-          // Generate public URL
-          const publicUrl = `https://storage.googleapis.com/${bucket.name}/${file.name}`;
-          
-          return {
-            id: fileName,
-            url: publicUrl,
-            title: `Superwire Daily - ${new Date(episodeDate).toLocaleDateString('en-US', {
-              weekday: 'long',
-              year: 'numeric',
-              month: 'long',
-              day: 'numeric'
-            })}`,
-            content_text: `Today's AI-powered news podcast featuring comprehensive coverage of the day's most important stories.`,
-            summary: `Daily news podcast with AI hosts discussing today's top stories`,
-            date_published: formattedDate,
-            attachments: [{
-              url: publicUrl,
-              mime_type: 'audio/mpeg',
-              title: fileName,
-              size_in_bytes: fileSize,
-              duration_in_seconds: 1200 // Default 20 minutes
-            }]
-          };
-        })
-    );
+    const episodes = episodesList
+      .slice(0, 50) // Last 50 episodes
+      .map((episode) => {
+        const fileName = episode.pathname.replace('episodes/', '');
+        const episodeDate = fileName.replace('episode-', '').replace('.mp3', '');
+        const formattedDate = new Date(episodeDate).toISOString();
+        
+        return {
+          id: fileName,
+          url: episode.url,
+          title: `Superwire Daily - ${new Date(episodeDate).toLocaleDateString('en-US', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+          })}`,
+          content_text: `Today's AI-powered news podcast featuring comprehensive coverage of the day's most important stories.`,
+          summary: `Daily news podcast with AI hosts discussing today's top stories`,
+          date_published: formattedDate,
+          attachments: [{
+            url: episode.url,
+            mime_type: 'audio/mpeg',
+            title: fileName,
+            size_in_bytes: episode.size,
+            duration_in_seconds: 1200 // Default 20 minutes
+          }]
+        };
+      });
 
     const feed: JSONFeed = {
       version: 'https://jsonfeed.org/version/1.1',

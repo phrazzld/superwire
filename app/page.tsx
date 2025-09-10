@@ -2,8 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
-import { storage } from "../pages/_app";
-import { getDownloadURL, ref } from "firebase/storage";
+// Firebase storage removed - using Vercel Blob Storage
 import ArticleCard, { ArticleGrid } from "./components/ArticleCard";
 import ContentTabs, { Tab } from "./components/ContentTabs";
 import CalendarView, { CompactCalendar } from "./components/CalendarView";

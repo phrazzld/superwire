@@ -135,6 +135,44 @@
 - **Service-Specific Documentation Pattern**: Each variable gets three-line documentation: purpose description, service identification, and acquisition instructions - eliminates guesswork in API setup
 - **Backward Compatibility Through Commented Deprecation**: Deprecated variables remain visible but commented out with clear migration instructions - prevents breaking existing setups while guiding modernization
 - **Task Batching for Configuration Work**: Grouping multiple related environment configuration tasks (4 in 1) achieves significant efficiency gains while ensuring comprehensive coverage of configuration concerns
+- **Jest TypeScript Integration Test Pattern**: Using `@jest/globals` imports (describe, it, expect, beforeAll, afterAll) with ts-jest preset for TypeScript test execution - tests/ingestion.test.ts:1
+- **Integration Testing Over Unit Testing for News Ingestion**: Real API calls and network operations provide better validation of production behavior than mocked unit tests - catches API changes, network issues, and selector failures - tests/ingestion.test.ts:30-45
+- **Timeout Management for Network Tests**: Extended timeouts (15s-60s) for network-dependent tests with reasonable fallback thresholds - tests/ingestion.test.ts:45, 127
+- **Statistical Validation Pattern**: Tests use percentage-based success rates (60% minimum) rather than absolute counts to handle flaky external services - tests/ingestion.test.ts:39
+- **Comprehensive Test Result Analysis**: Tests validate both successful operations and expected error types - includes error categorization (PAYWALL, TIMEOUT, SELECTOR_NOT_FOUND) - tests/ingestion.test.ts:90-91
+- **Test Data Sample Creation**: beforeAll setup creates realistic test data objects with required fields and metadata - tests/generation.test.ts:29-41
+- **Batch Operation Testing**: Tests validate concurrent/parallel processing with concurrency limits and timing constraints - tests/ingestion.test.ts:60-72
+- **Multi-Layer Error Handling Testing**: Tests verify graceful degradation, retry logic, and fallback mechanisms - tests/ingestion.test.ts:129-143
+- **Configuration-Driven Test Setup**: Tests load actual configuration files and use enabled sources rather than hardcoded values - tests/ingestion.test.ts:23-27
+- **Cost Tracking Integration Testing**: Tests monitor and validate cost accumulation across different models and task types - tests/costs.test.ts:47-86
+- **Progress Monitoring in Tests**: Tests include progress logging and batch status reporting for long-running operations - tests/ingestion.test.ts:257-259
+- **Real-World URL Testing**: Tests use actual news source URLs rather than mock endpoints to validate scraping selectors - tests/ingestion.test.ts:78, 96
+- **Test Fixture File Management**: Tests handle temporary test files with proper cleanup in afterAll hooks - tests/costs.test.ts:36-45
+- **Editorial System Integration Testing**: Tests validate editorial DNA loading, story importance calculation, and host selection algorithms - tests/editorial.test.ts:77-100
+- **Paywall Detection Testing**: Tests specifically validate paywall detection logic with known paywall URLs - tests/ingestion.test.ts:95-102
+- **Fallback Selector Testing**: Tests verify progressive fallback selector chains work correctly when primary selectors fail - tests/ingestion.test.ts:104-117
+- **Performance Constraint Testing**: Tests validate rate limiting, timing constraints, and resource usage patterns - tests/ingestion.test.ts:156-164
+- **Source-Specific Statistics Testing**: Tests verify per-source metrics tracking and breakdown reporting - tests/ingestion.test.ts:166-181
+- **Host Personality Consistency Testing**: Tests validate generated content maintains host voice characteristics and personality traits - tests/editorial.test.ts:301-335
+- **Budget Management Testing**: Tests verify cost threshold detection, budget warnings, and spending limit enforcement - tests/costs.test.ts:198-255
+- **Always Verify Existing Work Before Starting Implementation**: Check if files exist and scan for related work (4 out of 5 test files already existed) to avoid duplicating effort and discover completed work that may not be documented in TODO lists
+- **Batch Discovery Pattern for Related Files**: When checking one test file, simultaneously check all related test files (*.test.ts) to get complete picture of test coverage and identify missing pieces efficiently
+- **Test Infrastructure May Exist Without Dependencies**: Configuration files (jest.config.js) and test structure may be present even when testing dependencies aren't installed - check package.json and install missing packages
+- **Task Documentation Drift Pattern**: Previous development sessions may complete substantial work without updating TODO.md - completed work exists but isn't reflected in task tracking, leading to redundant effort
+- **Vercel Blob Test Environment Variable Validation**: validateBlobToken() function checks for BLOB_READ_WRITE_TOKEN format (must start with 'vercel_blob_') - src/lib/vercel-blob.ts:38-52 provides mocking pattern foundation
+- **Vercel Blob withRetry Pattern**: Exponential backoff with [1000, 2000, 4000]ms delays, operation name logging, and attempt-based error handling - src/lib/vercel-blob.ts:54-80 shows retry testing requirements
+- **Vercel Blob Operation Validation Pattern**: Input validation with Buffer content verification, filename extension checking (.mp3), and URL format validation (blob.vercel-storage.com) - src/lib/vercel-blob.ts:101-115, 220-223, 256-258
+- **Vercel Blob Response Structure Testing**: UploadResult, ListEpisodesResult, and EpisodeMetadata interfaces define expected response structures for comprehensive test validation - src/lib/vercel-blob.ts:10-35
+- **Module-Level External Service Mocking**: Mock external dependencies at module level using jest.mock() for complete isolation - prevents real API calls during testing while maintaining code structure - tests/storage.test.ts:16-24
+- **Comprehensive Test Coverage Strategy**: 30+ test cases covering success/failure paths, input validation, retry logic, error handling, pagination, and batch operations provides thorough validation - tests/storage.test.ts demonstrates full API coverage pattern
+- **Mock Response Structure Alignment**: Mock responses must match actual API response structure exactly - tests/storage.test.ts:64-70, 151-164 show proper mock object construction matching Vercel Blob API
+- **Timing-Aware Test Validation**: Tests that verify retry logic include timing assertions (duration >= expected delay) to ensure exponential backoff is actually functioning - tests/storage.test.ts:127-142 demonstrates retry timing validation
+- **Environmental State Management in Tests**: Use beforeEach/afterAll hooks to manage environment variables cleanly, ensuring tests don't interfere with each other - tests/storage.test.ts:32-40
+- **Input Validation Testing Strategy**: Dedicate test cases to invalid inputs (empty buffers, wrong file extensions, invalid URLs) to verify error handling before attempting external calls - tests/storage.test.ts:101-125
+- **Pagination Testing Pattern**: Mock paginated responses with hasMore/cursor fields to validate pagination logic without requiring large datasets - tests/storage.test.ts:187-204
+- **Configuration Dependency Testing**: Test graceful degradation when required configuration is missing - verifies system behavior without causing crashes - tests/storage.test.ts:206-214, 270-277
+- **Partial Failure Batch Testing**: Test batch operations with mixed success/failure scenarios to validate resilient batch processing - tests/storage.test.ts:353-368
+- **API Response Validation Testing**: Test metadata retrieval and response structure validation to ensure integration handles API responses correctly - tests/storage.test.ts:285-325
 
 ## Bugs & Fixes
 - **Calendar Date State Initialization**: Calendar currentMonth state should initialize from selectedDate if available, otherwise new Date() to prevent calendar starting at wrong month when date is pre-selected
@@ -208,3 +246,12 @@
 - **Direct URL Usage with CDN Enhancement Over Storage Path Resolution**: AudioPlayer components should receive direct URLs enhanced with CDN utilities rather than resolving storage paths - separates storage concerns from UI components and leverages existing fallback infrastructure
 - **Central Secrets Management Over Distributed Key Storage**: ~/.secrets file provides centralized, secure API key repository across projects vs storing keys in multiple .env.local files - reduces exposure surface and enables consistent key rotation
 - **Comprehensive .env.example Documentation Over Minimal Templates**: Creating detailed configuration templates with service descriptions, acquisition instructions, and requirement groupings reduces developer onboarding friction vs bare-minimum key listings - serves as self-documenting setup guide
+- **Integration Testing Over Unit Testing for News Ingestion**: Real API calls and network operations provide better validation of production behavior than mocked unit tests - catches API changes, network issues, and selector failures - tests/ingestion.test.ts
+- **Statistical Success Thresholds Over Absolute Counts**: Using percentage-based success rates (60% minimum) accommodates external service reliability while maintaining test stability - tests/ingestion.test.ts:39
+- **Extended Timeouts Over Fast-Fail for Network Operations**: 15-60 second timeouts for network tests account for real-world latency and API response times vs quick unit test timeouts - tests/ingestion.test.ts:45, 127
+- **Real Configuration Loading Over Test Mocks**: Tests load actual source configurations and settings to validate end-to-end behavior vs isolated component testing - tests/ingestion.test.ts:23-27
+- **Cost-Aware Testing Over Free Testing**: Tests monitor and validate actual API costs during operations to ensure budget-conscious development practices - tests/costs.test.ts:47-86
+- **Progressive Error Collection Over Fail-Fast**: Tests collect and analyze both successful and failed operations to validate resilient system behavior - tests/ingestion.test.ts:241-280
+- **Module-Level Mocking Over Function-Level Mocking**: Mock entire external modules (jest.mock('@vercel/blob')) rather than individual functions to ensure complete isolation and prevent accidental real API calls - tests/storage.test.ts:16-24
+- **Comprehensive Test Coverage Over Happy Path Testing**: Write 30+ test cases covering all operations (success/failure/validation/retry/pagination/batch) to validate complete API behavior vs basic functionality testing
+- **Timing Validation for Retry Logic Over Mock Call Counting**: Include duration assertions in retry tests to verify exponential backoff is actually working vs just checking call counts - tests/storage.test.ts:134-141

@@ -4,8 +4,9 @@
  * Based on existing patterns from pages/api/episodes.ts
  */
 
-import * as fs from 'fs';
-import * as path from 'path';
+// Conditionally import fs and path only in Node.js environment
+const fs = typeof window === 'undefined' ? require('fs') : null;
+const path = typeof window === 'undefined' ? require('path') : null;
 
 // Types for OpenRouter API
 export interface OpenRouterMessage {
@@ -355,6 +356,11 @@ export async function trackTokenUsage(
     prompt: options?.prompt?.substring(0, 100),  // Store first 100 chars for reference
   };
 
+  // Skip cost tracking if not in Node.js environment
+  if (!fs || !path) {
+    return;
+  }
+
   // Load existing data or create new
   let costData: CostTracking;
   try {
@@ -418,6 +424,11 @@ export async function trackTokenUsage(
  * Get cost summary from costs.json
  */
 export async function getCostSummary(costsFilePath?: string): Promise<CostTracking | null> {
+  // Return null if not in Node.js environment
+  if (!fs || !path) {
+    return null;
+  }
+  
   const costsPath = costsFilePath || path.join(process.cwd(), 'costs.json');
   
   try {

@@ -10,7 +10,7 @@
  * - Direct storage URLs as fallback
  */
 
-import { EnhancedError, ErrorCategory, retryWithBackoff, RetryOptions } from './error-handler';
+import { EnhancedError, ErrorCategory, withRetry, RetryOptions } from './error-handler';
 
 /**
  * CDN provider types
@@ -135,6 +135,8 @@ export class CDNService {
       throw new EnhancedError(
         `Failed to transform URL: ${error instanceof Error ? error.message : 'Unknown error'}`,
         ErrorCategory.VALIDATION,
+        undefined,
+        1,
         { originalUrl: storageUrl, error }
       );
     }
@@ -235,11 +237,11 @@ export class CDNService {
     
     const options: RetryOptions = {
       maxAttempts: 2,
-      delays: [1000, 2000],
-      timeout: 3000
+      delayMs: [1000, 2000],
+      timeoutMs: 3000
     };
 
-    const result = await retryWithBackoff(
+    const result = await withRetry(
       async () => {
         const response = await fetch(healthCheckUrl, {
           method: 'HEAD',

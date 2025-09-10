@@ -3,8 +3,9 @@
  * Handles voice synthesis, cost estimation, and tracking
  */
 
-import fs from 'fs';
-import path from 'path';
+// Conditionally import fs and path only in Node.js environment
+const fs = typeof window === 'undefined' ? require('fs') : null;
+const path = typeof window === 'undefined' ? require('path') : null;
 import crypto from 'crypto';
 
 // ElevenLabs API Configuration
@@ -158,6 +159,11 @@ export async function trackAudioUsage(
     duration
   };
 
+  // Skip cost tracking if not in Node.js environment
+  if (!fs || !path) {
+    return;
+  }
+
   try {
     // Read existing costs file or create structure
     const costsPath = path.resolve(process.cwd(), costsFilePath);
@@ -219,6 +225,17 @@ export function getAudioCostSummary(costsFilePath: string = 'costs.json'): {
   averageCostPerRequest: number;
   totalCharactersProcessed: number;
 } {
+  // Return empty summary if not in Node.js environment
+  if (!fs || !path) {
+    return {
+      todaysAudioCosts: 0,
+      totalAudioCosts: 0,
+      voiceBreakdown: {},
+      averageCostPerRequest: 0,
+      totalCharactersProcessed: 0
+    };
+  }
+
   try {
     const costsPath = path.resolve(process.cwd(), costsFilePath);
     if (!fs.existsSync(costsPath)) {
@@ -946,15 +963,21 @@ export class AudioCache {
   private metadataPath: string;
 
   constructor(cacheDir: string = AUDIO_CACHE_DIR) {
-    this.cacheDir = path.resolve(process.cwd(), cacheDir);
-    this.metadataPath = path.join(this.cacheDir, 'cache-metadata.json');
-    this.ensureCacheDirectory();
+    if (path) {
+      this.cacheDir = path.resolve(process.cwd(), cacheDir);
+      this.metadataPath = path.join(this.cacheDir, 'cache-metadata.json');
+      this.ensureCacheDirectory();
+    } else {
+      this.cacheDir = '';
+      this.metadataPath = '';
+    }
   }
 
   /**
    * Ensure cache directory exists
    */
   private ensureCacheDirectory(): void {
+    if (!fs || !path) return;
     try {
       if (!fs.existsSync(this.cacheDir)) {
         fs.mkdirSync(this.cacheDir, { recursive: true });

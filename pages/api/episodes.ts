@@ -132,7 +132,7 @@ const writeIntroduction = async (headlines: any[]): Promise<string> => {
       
       // Use OpenRouter with GPT-4o for script generation
       response = await openRouterClient.completeTask(
-        'script' as TaskType, // Routes to GPT-4o - using string literal due to enum issue
+        TaskType.SCRIPT_GENERATION,
         userPrompt,
         {
           systemPrompt,
@@ -536,7 +536,7 @@ const writeConclusion = async (headlines: any[]): Promise<string> => {
       
       // Use OpenRouter with GPT-4o for script generation
       response = await openRouterClient.completeTask(
-        'script' as TaskType, // Routes to GPT-4o - using string literal due to enum issue
+        TaskType.SCRIPT_GENERATION,
         userPrompt,
         {
           systemPrompt,

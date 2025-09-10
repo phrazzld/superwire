@@ -1,7 +1,7 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import RSS from "rss";
 import { getDownloadURL, ref, list } from "firebase/storage";
-import { storage } from "../_app";
+// Firebase storage removed - using Vercel Blob Storage
 
 interface Episode {
   name: string;
@@ -62,41 +62,12 @@ function generateEpisodeDescription(date: Date): string {
   return `AI-powered news podcast for ${dateStr}. Today's episode covers the latest developments in technology, politics, climate, and global affairs with analysis from our AI hosts Adam, Dallas, and Jordan.`;
 }
 
-// Fetch all episodes from Firebase Storage
+// Fetch all episodes from Vercel Blob Storage
 async function fetchAllEpisodes(): Promise<Episode[]> {
-  try {
-    const episodesRef = ref(storage, 'episodes/');
-    const episodesList = await list(episodesRef);
-    
-    const episodes: Episode[] = [];
-    let index = 0;
-    
-    for (const item of episodesList.items) {
-      const name = item.name;
-      const url = await getDownloadURL(item);
-      const date = parseEpisodeDate(name);
-      
-      index++;
-      
-      episodes.push({
-        name,
-        url,
-        date,
-        title: generateEpisodeTitle(date, index),
-        description: generateEpisodeDescription(date),
-        duration: 1800, // Default 30 minutes
-        size: 15000000  // Default ~15MB (estimate based on 128kbps MP3)
-      });
-    }
-    
-    // Sort by date, newest first
-    episodes.sort((a, b) => b.date.getTime() - a.date.getTime());
-    
-    return episodes;
-  } catch (error) {
-    console.error("Error fetching episodes from Firebase:", error);
-    return [];
-  }
+  // TODO: Implement Vercel Blob storage fetching
+  // Firebase storage has been deprecated in favor of Vercel Blob
+  // For now, returning empty array until Blob storage is configured
+  return [];
 }
 
 export default async function handler(

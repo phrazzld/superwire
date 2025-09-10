@@ -1,233 +1,304 @@
-# Superwire 🎙️
+# Superwire - AI-Powered Personal Media Empire
 
-> AI-powered news podcast generator that creates dynamic audio episodes from current headlines
+> Transform daily news into YOUR distinctive editorial voice through AI-powered multimedia content generation
 
-Superwire is an automated news podcast system that combines AI content generation with text-to-speech synthesis to produce daily news episodes. It fetches current headlines, generates engaging scripts with distinct host personalities, and produces high-quality audio podcasts ready for distribution.
+## 🚀 Overview
 
-## 🌟 Features
+Superwire is a sophisticated AI-powered news platform that automatically generates a complete media publication daily - articles, op-eds, briefs, and podcasts - all filtered through YOUR unique editorial perspective. Think of it as having an entire newsroom powered by AI, with you as the editor-in-chief.
 
-- **Automated Daily Generation**: Fully automated pipeline from news ingestion to audio production
-- **Multiple Content Formats**: Articles, op-eds, podcasts, video scripts, and more
-- **AI Host Personalities**: Three distinct hosts (Adam, Dallas, Jordan) with unique perspectives
-- **Cost-Optimized**: Uses OpenAI TTS (12x cheaper than ElevenLabs) with intelligent model routing
-- **Editorial DNA System**: Sophisticated content filtering based on importance and relevance
-- **Production-Ready Audio**: Professional audio processing with crossfades and normalization
+### Key Features
 
-## 🏗️ Architecture
+- **Multi-Format Content**: Automatically generates articles, op-eds, daily briefs, and audio podcasts
+- **Editorial DNA System**: Configurable values, perspectives, and priorities that shape all content
+- **3-Host Podcast System**: Dynamic AI personalities (Adam, Dallas, Jordan) with distinct voices
+- **Cost-Optimized AI Routing**: Intelligently routes tasks to appropriate models (Gemini, GPT-4, Claude)
+- **Budget Management**: Stays under $6/day with comprehensive cost tracking
+- **Quality Assurance**: Built-in content validation, hallucination detection, and consistency checks
 
-### Technology Stack
-
-- **Frontend**: Next.js 13+ (App Router), React 18, TypeScript, Tailwind CSS
-- **AI Services**: 
-  - OpenRouter (GPT-4, Claude, Gemini) for content generation
-  - OpenAI TTS for voice synthesis (primary)
-  - ElevenLabs TTS (fallback option)
-- **Storage**: Vercel Blob Storage (CDN-backed audio hosting)
-- **Database**: Convex (episode metadata and content storage)
-- **Audio Processing**: FFmpeg for stitching and audio enhancement
-- **Deployment**: Vercel with Edge Functions
-
-### System Architecture
+## 📊 Architecture
 
 ```
-┌─────────────┐     ┌──────────────┐     ┌─────────────┐
-│  News APIs  │────▶│   Ingestion  │────▶│  Editorial  │
-└─────────────┘     └──────────────┘     │    Filter   │
-                                          └─────────────┘
-                                                 │
-                                                 ▼
-┌─────────────┐     ┌──────────────┐     ┌─────────────┐
-│ Vercel Blob │◀────│     Audio    │◀────│     AI      │
-│   Storage   │     │  Processing  │     │ Generation  │
-└─────────────┘     └──────────────┘     └─────────────┘
-                            │
-                            ▼
-                    ┌──────────────┐
-                    │   Frontend   │
-                    │   (Next.js)  │
-                    └──────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│                     INGESTION LAYER                          │
+│  • 500+ articles/day from Reuters, AP, BBC, Guardian, NYT    │
+│  • RSS fetching → Content scraping → Deduplication           │
+└──────────────────────────┬──────────────────────────────────┘
+                           │
+┌──────────────────────────▼──────────────────────────────────┐
+│                     EDITORIAL LAYER                          │
+│  • Apply editorial DNA filters and values                    │
+│  • Score stories by importance (0-10 scale)                  │
+│  • Filter by minimum thresholds                              │
+└──────────────────────────┬──────────────────────────────────┘
+                           │
+┌──────────────────────────▼──────────────────────────────────┐
+│                    GENERATION LAYER                          │
+│  • Articles: Gemini 2.0 Flash ($0.10/day)                   │
+│  • Op-Eds: GPT-4o ($0.50/day)                               │
+│  • Briefs: Claude 3.5 Sonnet ($0.05/day)                    │
+│  • Scripts: GPT-4o ($1.00/day)                              │
+└──────────────────────────┬──────────────────────────────────┘
+                           │
+┌──────────────────────────▼──────────────────────────────────┐
+│                      AUDIO LAYER                             │
+│  • ElevenLabs text-to-speech synthesis                       │
+│  • FFmpeg audio processing and normalization                 │
+│  • Convex/Firebase storage                                   │
+└──────────────────────────────────────────────────────────────┘
 ```
 
-## 🚀 Getting Started
+## 🛠️ Quick Start
 
 ### Prerequisites
 
-- Node.js 22+ and Yarn
-- FFmpeg installed locally (for audio processing)
-- API keys for required services (see Environment Setup)
+- Node.js 18+ and Yarn
+- FFmpeg (for audio processing)
+- API Keys:
+  - [OpenRouter](https://openrouter.ai/keys) - AI model access
+  - [ElevenLabs](https://elevenlabs.io/) - Text-to-speech
+  - [News API](https://newsapi.org/) - News sources (optional)
+  - Firebase/Convex - Storage
 
 ### Installation
 
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/yourusername/superwire.git
-   cd superwire
-   ```
+```bash
+# Clone the repository
+git clone https://github.com/yourusername/superwire.git
+cd superwire
 
-2. **Install dependencies**
-   ```bash
-   yarn install
-   ```
+# Install dependencies
+yarn install
 
-3. **Set up environment variables**
-   ```bash
-   cp .env.example .env.local
-   ```
+# Copy environment variables
+cp .env.example .env.local
 
-4. **Configure required API keys in `.env.local`**
-   ```env
-   # Required API Keys
-   OPENROUTER_API_KEY=sk-or-v1-xxx        # AI content generation
-   OPENAI_API_KEY=sk-proj-xxx             # Text-to-speech
-   NEWS_API_KEY=xxx                       # News ingestion
-   BLOB_READ_WRITE_TOKEN=vercel_blob_xxx  # Storage
-   
-   # Convex Database
-   CONVEX_DEPLOYMENT=prod:xxx
-   NEXT_PUBLIC_CONVEX_URL=https://xxx.convex.cloud
-   ```
+# Edit .env.local with your API keys
+```
 
-5. **Set up Convex database**
-   ```bash
-   npx convex dev
-   # Follow the interactive setup
-   # Update .env.local with provided URLs
-   ```
+### Configuration
 
-6. **Run development server**
-   ```bash
-   yarn dev
-   ```
+1. **Set up API keys** in `.env.local`:
+```env
+OPENROUTER_API_KEY=sk-or-v1-your-key
+ELEVEN_LABS_API_KEY=your-elevenlabs-key
+NEWS_API_KEY=your-news-api-key
+GOOGLE_SERVICE_KEY=base64-encoded-firebase-key
+```
 
-7. **Access the application**
-   ```
-   http://localhost:3000
-   ```
+2. **Configure Editorial DNA** in `config/editorial.yaml`:
+```yaml
+values:
+  truthSeeking: 10
+  systemicThinking: 9
+  humanCentered: 8
+  futureOriented: 9
+
+topic_priorities:
+  technology: 9
+  climate: 8
+  economy: 7
+  society: 8
+```
+
+3. **Customize Host Personalities** in `config/hosts.yaml`
+
+### Running Locally
+
+```bash
+# Start development server
+yarn dev
+
+# Run tests
+yarn test
+
+# Generate content manually (development only)
+curl -X POST http://localhost:3000/api/cron/generate \
+  -H "Authorization: Bearer your-secret-token"
+
+# Check generation status
+curl http://localhost:3000/api/stats
+```
+
+## 📚 Content Types
+
+### Articles (500-800 words)
+- Generated using Gemini 2.0 Flash for cost efficiency
+- Editorial angle injection based on story type
+- Quality scoring and validation
+- ~20 articles per day
+
+### Op-Eds (1000+ words)
+- GPT-4o powered for creative synthesis
+- Strong host personality integration
+- Thesis-driven argumentative structure
+- 2 op-eds per day on controversial topics
+
+### Daily Brief (500 words)
+- Executive summary of day's coverage
+- 3-5 bullet points per major story
+- Quick consumption format
+- Generated once daily
+
+### Podcast Episodes (20 minutes)
+- Multi-host dialogue between AI personalities
+- Historical context and future predictions
+- Professional audio quality (ElevenLabs + FFmpeg)
+- Optional generation based on budget
+
+## 💰 Cost Management
+
+Daily budget target: **$6.00**
+
+| Component | Model | Daily Cost | Usage |
+|-----------|-------|------------|-------|
+| Articles | Gemini 2.0 Flash | $0.10 | 20 articles |
+| Op-Eds | GPT-4o | $0.50 | 2 op-eds |
+| Brief | Claude 3.5 | $0.05 | 1 brief |
+| Script | GPT-4o | $1.00 | 1 podcast |
+| Audio | ElevenLabs | $2.00 | 20 min audio |
+| **Total** | | **$3.65** | Under budget |
+
+### Cost Optimization Features
+- Task-based model routing
+- Free tier usage (Gemini Flash)
+- Audio caching for intros/outros
+- Budget monitoring and alerts
+- Automatic limiting when approaching threshold
+
+## 🧪 Testing
+
+```bash
+# Run all tests
+yarn test
+
+# Run specific test suite
+yarn test ingestion.test.ts
+
+# Run with coverage
+yarn test:coverage
+
+# Watch mode for development
+yarn test:watch
+```
+
+### Test Coverage
+- **Ingestion**: RSS fetching, scraping, deduplication
+- **Generation**: Articles, op-eds, briefs, scripts
+- **Costs**: Tracking, budgets, thresholds
+- **Editorial**: DNA application, host selection
+- **Quality**: Grammar, readability, consistency
+
+## 🚀 Deployment
+
+### Vercel Deployment
+
+1. Push to GitHub
+2. Connect repository to Vercel
+3. Set environment variables in Vercel dashboard
+4. Deploy
+
+### Automatic Daily Generation
+
+The system uses Vercel Cron Jobs for daily automation:
+
+```json
+{
+  "crons": [{
+    "path": "/api/cron/generate",
+    "schedule": "0 6 * * *"
+  }]
+}
+```
+
+Runs daily at 6:00 AM UTC.
 
 ## 📁 Project Structure
 
 ```
 superwire/
-├── app/                    # Next.js 13+ App Router
-│   ├── components/        # React components
-│   ├── hooks/            # Custom React hooks
-│   └── page.tsx          # Main application page
-├── pages/
-│   └── api/              # API routes
-│       └── episodes.ts   # Episode generation endpoint
+├── app/                    # Next.js App Router pages
+│   ├── components/         # React components
+│   └── page.tsx           # Main UI
+├── pages/                  # API routes (Pages Router)
+│   └── api/
+│       ├── episodes.ts    # Legacy podcast generation
+│       ├── content/       # Content API endpoints
+│       ├── feed.json.ts   # JSON feed
+│       ├── rss.ts         # RSS feed
+│       └── stats.ts       # Metrics API
 ├── src/
-│   └── lib/              # Core business logic
-│       ├── ingestion.ts  # News fetching
-│       ├── generation.ts # AI content generation
-│       ├── openrouter.ts # AI service integration
-│       ├── openai-tts.ts # Voice synthesis
-│       └── vercel-blob.ts # Storage operations
-├── config/               # YAML configuration files
-│   ├── editorial.yaml   # Editorial DNA settings
-│   ├── hosts.yaml      # Host personalities
-│   └── sources.yaml    # News sources
-├── tests/               # Jest test suites
-└── scripts/            # Utility scripts
+│   ├── generators/        # Content generation
+│   │   ├── article.ts     # Article generator
+│   │   ├── oped.ts        # Op-ed generator
+│   │   └── brief.ts       # Brief generator
+│   └── lib/              # Core utilities
+│       ├── openrouter.ts  # AI model routing
+│       ├── editorial.ts   # Editorial DNA system
+│       ├── hosts.ts       # Host personalities
+│       ├── ingestion.ts   # News ingestion
+│       └── quality.ts     # Quality checks
+├── config/               # Configuration files
+│   ├── editorial.yaml    # Editorial values
+│   ├── hosts.yaml        # Host personalities
+│   └── sources.yaml      # News sources
+├── convex/              # Database schema
+├── tests/               # Test suites
+└── scripts/             # Utility scripts
 ```
 
-## 🎯 Key Features Explained
+## 🔧 Troubleshooting
 
-### Editorial DNA System
-The system uses sophisticated filtering to select newsworthy content based on:
-- Importance scoring (breaking news, major events)
-- Topic relevance (politics, technology, culture)
-- Geographic significance (local vs global impact)
-- Temporal relevance (trending topics)
+### Common Issues
 
-### Host Personalities
-Three AI hosts with distinct perspectives:
-- **Adam**: Analytical, focuses on facts and data
-- **Dallas**: Empathetic, emphasizes human impact
-- **Jordan**: Energetic, covers culture and social issues
-
-### Cost Optimization
-- Uses OpenAI TTS ($15/1M chars) vs ElevenLabs ($165/1M chars)
-- Intelligent model routing via OpenRouter
-- Daily budget limit of $6 with automatic cutoffs
-- Comprehensive cost tracking and reporting
-
-## 🧪 Testing
-
-Run the test suite:
+**Port already in use**
 ```bash
-yarn test                # Run all tests
-yarn test:watch         # Watch mode
-yarn test:coverage      # Coverage report
+# Kill process on port 3000
+lsof -i :3000 | grep LISTEN | awk '{print $2}' | xargs kill -9
 ```
 
-Test files include:
-- `tests/ingestion.test.ts` - News fetching validation
-- `tests/generation.test.ts` - Content generation tests
-- `tests/costs.test.ts` - Cost calculation verification
-- `tests/editorial.test.ts` - Editorial filtering tests
-- `tests/storage.test.ts` - Vercel Blob operations
-
-## 📊 Daily Operations
-
-### Manual Episode Generation
+**Convex setup required**
 ```bash
-# Generate a test episode
-yarn tsx scripts/test-episode-tts.ts
-
-# Run full pipeline
-curl -X POST http://localhost:3000/api/episodes
+# Interactive setup required once
+npx convex dev
+# Select "Create new project"
+# Copy credentials to .env.local
 ```
 
-### Monitoring
-- Cost tracking: Check `costs.json` for daily spending
-- Episode history: View generated episodes in Vercel Blob dashboard
-- Error logs: Monitor Vercel Functions logs for issues
-
-## 🚢 Deployment
-
-### Deploy to Vercel
-1. Push code to GitHub
-2. Connect repository to Vercel
-3. Configure environment variables in Vercel dashboard
-4. Deploy
-
-### Production Checklist
-- [ ] All environment variables configured
-- [ ] Vercel Blob storage connected
-- [ ] Convex database initialized
-- [ ] Cost alerts configured
-- [ ] Error tracking enabled
+**Cost overruns**
+- Check `/api/stats` for detailed breakdown
+- Reduce op-ed generation frequency
+- Disable audio generation temporarily
+- Use more free tier models
 
 ## 🤝 Contributing
 
-We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
+We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 ### Development Workflow
+
 1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+2. Create feature branch (`git checkout -b feature/amazing-feature`)
 3. Commit changes (`git commit -m 'Add amazing feature'`)
 4. Push to branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+5. Open Pull Request
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+MIT License - see [LICENSE](LICENSE) for details.
 
 ## 🙏 Acknowledgments
 
-- OpenAI for GPT and TTS APIs
-- News API for headline aggregation
-- Vercel for hosting and blob storage
-- Convex for real-time database
-- The open-source community
+- OpenRouter for unified AI model access
+- ElevenLabs for realistic voice synthesis
+- News sources for content feeds
+- FFmpeg for audio processing
 
 ## 📞 Support
 
-For issues and questions:
-- Open an issue on [GitHub](https://github.com/yourusername/superwire/issues)
-- Check existing issues for solutions
-- Review the [OPERATIONS.md](OPERATIONS.md) for troubleshooting
+- **Issues**: [GitHub Issues](https://github.com/yourusername/superwire/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/yourusername/superwire/discussions)
+- **Email**: support@superwire.news
 
 ---
 
-Built with ❤️ by the Superwire team
+Built with ❤️ by the Superwire team. Making AI-powered media accessible to everyone.

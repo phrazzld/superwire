@@ -27,6 +27,7 @@ export interface IngestedArticle {
   // Editorial processing
   editorialAngle?: string | { primary: string; secondary: string; avoid: string };
   editorialPerspective?: string | string[];
+  editorialScore?: number;
   
   // Additional metadata
   metadata?: {

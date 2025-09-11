@@ -230,6 +230,75 @@
   - Documented best practices and changelog
   ```
 
+## 🔥 CRITICAL: Merge Readiness Tasks (Branch → Master)
+
+### Security & Vulnerability Remediation
+- [ ] Run `yarn audit --json > audit-report.json` and parse output to identify 27 vulnerabilities (3 critical, 2 high)
+- [ ] Fix critical vulnerability in package `ws` (>=7.4.6 required) by adding to package.json resolutions: `"ws": "^7.5.10"`
+- [ ] Fix critical vulnerability in package `semver` (<7.5.2) by updating `@types/semver` to ^7.5.8
+- [ ] Fix critical vulnerability in package `postcss` (<8.4.31) by updating to 8.5.6 in devDependencies
+- [ ] Run `yarn install --force` after adding resolutions to rebuild lockfile with security fixes
+- [ ] Verify vulnerability count reduced to 0 critical with `yarn audit --level critical`
+
+### Fix Failing Vercel Deployment 
+- [ ] Visit https://vercel.com/moomooskycow/super-wire/26D8GwN86u9ACjWLBg6c1QBg5EUy to identify deployment error
+- [ ] Check if `super-wire` is duplicate project - if yes, run `vercel remove super-wire --yes` to delete
+- [ ] If not duplicate, check build logs for missing env vars and add to Vercel dashboard: NEWS_API_KEY, BLOB_READ_WRITE_TOKEN
+- [ ] Trigger redeployment with `vercel --prod` and verify success at PR checks
+
+### Dependency Updates - Phase 1 (Non-Breaking)
+- [ ] Update TypeScript to 5.9.2: `yarn add -D typescript@^5.9.2` (no breaking changes, just stricter checks)
+- [ ] Update Convex to latest: `yarn add convex@^1.27.0` (patch update, no breaking changes)
+- [ ] Update dev dependencies batch: `yarn add -D @types/fluent-ffmpeg@^2.1.27 autoprefixer@^10.4.21 postcss@^8.5.6 dotenv@^17.2.2`
+- [ ] Update Cheerio to 1.1.2: `yarn add cheerio@^1.1.2` (bug fixes, no API changes)
+- [ ] Run `yarn build` after updates to verify no new TypeScript errors introduced
+
+### Dependency Updates - Phase 2 (Breaking - Careful)
+- [ ] Create branch `chore/next-15-upgrade` from current branch for Next.js 15 migration
+- [ ] Update Next.js: `yarn add next@^15.5.3 react@^18.3.1 react-dom@^18.3.1` (keep React 18 for compatibility)
+- [ ] Fix Next.js 15 breaking changes: Update `next.config.js` to use `next.config.mjs` if needed
+- [ ] Update any `getStaticProps` to new `generateStaticParams` if using app directory
+- [ ] Test full application locally with `yarn dev` and verify all routes work
+- [ ] If Next.js 15 causes issues, document them and revert to keep 13.1.6 for now
+
+### Jest Test Configuration Fix
+- [ ] Install missing Jest types: `yarn add -D @types/jest@^29.5.14 ts-jest@^29.2.5`
+- [ ] Create `jest.setup.js` with Convex mocks: `jest.mock('convex/react', () => ({ useQuery: jest.fn() }))`
+- [ ] Add to `jest.config.js` under setupFilesAfterEnv: `'<rootDir>/jest.setup.js'`
+- [ ] Mock fetch globally in jest.setup.js: `global.fetch = jest.fn(() => Promise.resolve({ json: () => Promise.resolve({}) }))`
+- [ ] Fix import issues by adding to jest.config.js moduleNameMapper: `'^@/(.*)$': '<rootDir>/src/$1'`
+- [ ] Run `yarn test` and document remaining failures that need mock implementations
+
+### README Accuracy Updates
+- [ ] Update line 44 in README.md: Change "ElevenLabs text-to-speech" to "OpenAI TTS (85% cheaper)"
+- [ ] Update cost table in README.md: Change daily total from $3.64 to $2.10
+- [ ] Add production URL to README.md overview: "🚀 Live Demo: https://superwire-knzom9ptl-moomooskycow.vercel.app"
+- [ ] Update architecture diagram to show "OpenAI TTS" instead of "ElevenLabs" in Audio Layer
+- [ ] Add migration notice in README: "⚠️ Note: Migrated from OpenAI v3 to OpenRouter + OpenAI TTS in Sept 2025"
+
+### Pull Request Preparation
+- [ ] Generate comprehensive changelog: `git log origin/master..HEAD --pretty=format:"- %s (%h)" > CHANGELOG_DRAFT.md`
+- [ ] Write PR description with sections: Summary, Breaking Changes, Migration Guide, Testing Instructions
+- [ ] Add screenshots: Homepage, Episode Player, Cost Dashboard (`screenshots/` directory)
+- [ ] Document environment variables needed: Create `.env.production.example` with all 15 required vars
+- [ ] Update PR title to be specific: "feat: Revive Superwire with OpenRouter AI, OpenAI TTS, and Vercel Blob storage"
+- [ ] Remove draft status: `gh pr ready 9`
+- [ ] Request review: `gh pr review 9 --request @phrazzld`
+
+### Host Personality Bug Fix
+- [ ] Debug Jordan host NaN issue in `src/lib/hosts.ts` - check line where `voice_id` is undefined
+- [ ] Verify all hosts have valid `voice_id` mappings in constants.ts: Adam, Dallas, Jordan
+- [ ] Add validation in `validateHostConsistency()`: `if (isNaN(score)) throw new Error('Invalid score')`
+- [ ] Update personality thresholds from 6.0 to 5.0 in `src/lib/editorial.ts` line 145
+- [ ] Run `npx tsx scripts/validate-host-consistency.ts` and verify >80% accuracy
+
+### Performance Optimization Tasks
+- [ ] Add cache headers to `next.config.js`: `Cache-Control: public, max-age=31536000` for `/_next/static/*`
+- [ ] Test service worker with: Open DevTools → Application → Service Workers → verify registration
+- [ ] Verify offline mode: DevTools → Network → Offline → reload page → confirm cached content loads
+- [ ] Test progressive article loading: Network throttle to "Slow 3G" → verify first paragraph loads < 2s
+- [ ] Measure Core Web Vitals with Lighthouse and document scores in PR description
+
 ## 🎯 Success Metrics
 
 Target performance for production:

@@ -5,15 +5,15 @@
  * Orchestrates the complete news-to-audio pipeline
  */
 
-import { NextRequest } from 'next/server';
-import { ingestDailyNews } from '../../../../lib/ingestion';
-import { loadEditorialDNA, applyEditorialFilter } from '../../../../lib/editorial';
-import { generateDailyBrief } from '../../../../generators/brief';
-import { generateArticle, generateArticlesBatch } from '../../../../generators/article';
-import { selectOpEdTopics, generateOpEd } from '../../../../generators/oped';
-import { getCostSummary } from '../../../../lib/openrouter';
-import { getAudioCostSummary, shouldLimitAudioGeneration } from '../../../../lib/elevenlabs';
-import { loadHostsConfig } from '../../../../lib/hosts';
+import { NextApiRequest, NextApiResponse } from 'next';
+import { ingestDailyNews } from '../../../src/lib/ingestion';
+import { loadEditorialDNA, applyEditorialFilter } from '../../../src/lib/editorial';
+import { generateDailyBrief } from '../../../src/generators/brief';
+import { generateArticle, generateArticlesBatch } from '../../../src/generators/article';
+import { selectOpEdTopics, generateOpEd } from '../../../src/generators/oped';
+import { getCostSummary } from '../../../src/lib/openrouter';
+import { getAudioCostSummary, shouldLimitAudioGeneration } from '../../../src/lib/elevenlabs';
+import { loadHostsConfig } from '../../../src/lib/hosts';
 
 /**
  * Generation status tracking
@@ -47,8 +47,8 @@ let generationStatus: GenerationStatus = { isRunning: false };
 /**
  * Verify bearer token for cron job security
  */
-function verifyBearerToken(request: NextRequest): boolean {
-  const authorization = request.headers.get('authorization');
+function verifyBearerToken(request: NextApiRequest): boolean {
+  const authorization = request.headers.authorization;
   const cronSecret = process.env.CRON_SECRET;
   
   if (!cronSecret) {
@@ -279,60 +279,64 @@ async function runDailyGeneration(): Promise<GenerationResult> {
 }
 
 /**
- * POST handler for cron-triggered generation
+ * API handler for cron endpoint
  */
-export async function POST(request: NextRequest) {
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
-    // Verify cron job authentication
-    if (!verifyBearerToken(request)) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), { 
-        status: 401,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
+    if (req.method === 'POST') {
+      // Verify cron job authentication
+      if (!verifyBearerToken(req)) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
 
-    // Check if generation is already running
-    if (isGenerationRunning()) {
-      return new Response(JSON.stringify({ 
-        error: 'Generation already in progress',
-        status: generationStatus
-      }), { 
-        status: 409,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
+      // Check if generation is already running
+      if (isGenerationRunning()) {
+        return res.status(409).json({ 
+          error: 'Generation already in progress',
+          status: generationStatus
+        });
+      }
 
-    // Check budget constraints before starting
-    if (shouldLimitAudioGeneration()) {
-      return new Response(JSON.stringify({ 
-        error: 'Daily audio budget limit reached',
-        audioCosts: getAudioCostSummary()
-      }), { 
-        status: 429,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
+      // Check budget constraints before starting
+      if (shouldLimitAudioGeneration()) {
+        return res.status(429).json({ 
+          error: 'Daily audio budget limit reached',
+          audioCosts: getAudioCostSummary()
+        });
+      }
 
-    // Run the generation pipeline
-    const result = await runDailyGeneration();
+      // Run the generation pipeline
+      const result = await runDailyGeneration();
 
-    // Return result
-    if (result.success) {
-      return new Response(JSON.stringify({
-        message: 'Daily content generation completed successfully',
-        result
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
+      // Return result
+      if (result.success) {
+        return res.status(200).json({
+          message: 'Daily content generation completed successfully',
+          result
+        });
+      } else {
+        return res.status(207).json({
+          message: 'Daily content generation completed with errors',
+          result
+        }); // 207 Multi-Status for partial success
+      }
+
+    } else if (req.method === 'GET') {
+      // Verify authentication for status checks
+      if (!verifyBearerToken(req)) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
+
+      return res.status(200).json({
+        status: generationStatus,
+        costs: {
+          ai: await getCostSummary(),
+          audio: getAudioCostSummary()
+        }
       });
+
     } else {
-      return new Response(JSON.stringify({
-        message: 'Daily content generation completed with errors',
-        result
-      }), { 
-        status: 207,
-        headers: { 'Content-Type': 'application/json' }
-      }); // 207 Multi-Status for partial success
+      return res.status(405).json({ error: 'Method not allowed' });
     }
 
   } catch (error) {
@@ -341,48 +345,9 @@ export async function POST(request: NextRequest) {
     // Reset status on critical error
     updateGenerationStatus({ isRunning: false, currentStep: 'Error' });
     
-    return new Response(JSON.stringify({
+    return res.status(500).json({
       error: 'Internal server error',
       message: error instanceof Error ? error.message : 'Unknown error'
-    }), { 
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
-  }
-}
-
-/**
- * GET handler for checking generation status
- */
-export async function GET(request: NextRequest) {
-  try {
-    // Verify authentication for status checks
-    if (!verifyBearerToken(request)) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), { 
-        status: 401,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
-
-    return new Response(JSON.stringify({
-      status: generationStatus,
-      costs: {
-        ai: await getCostSummary(),
-        audio: getAudioCostSummary()
-      }
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
-
-  } catch (error) {
-    console.error('Status check error:', error);
-    return new Response(JSON.stringify({
-      error: 'Failed to get status',
-      message: error instanceof Error ? error.message : 'Unknown error'
-    }), { 
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
     });
   }
 }

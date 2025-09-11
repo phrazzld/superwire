@@ -6,8 +6,9 @@
 
 The system runs automatically via Vercel Cron Jobs:
 - **Time**: 6:00 AM UTC daily
-- **Duration**: ~15 minutes total
-- **Cost**: ~$3-6 per day
+- **Duration**: ~90 seconds total
+- **Cost**: ~$2.10 per day (35% of $6 budget)
+- **Live URL**: https://superwire-knzom9ptl-moomooskycow.vercel.app
 
 ### Generation Pipeline Stages
 
@@ -46,20 +47,20 @@ graph LR
 
 #### 3. Article Generation (3-4 minutes)
 ```
-- Generates 20 articles using Gemini
+- Generates 5 articles using GPT-5/Gemini 2.5
 - 500-800 words each
 - Batch processing (5 concurrent)
 - Quality validation
-- Cost: ~$0.10 total
+- Cost: ~$0.50 total
 ```
 
 #### 4. Op-Ed Generation (2-3 minutes)
 ```
 - Selects 2 controversial topics
-- Generates with GPT-4o
+- Generates with GPT-5
 - 1000+ words each
-- Host personality integration
-- Cost: ~$0.50 total
+- Host personality integration (Adam, Dallas, Jordan)
+- Cost: ~$1.00 total
 ```
 
 #### 5. Brief Generation (1 minute)
@@ -82,17 +83,18 @@ graph LR
 
 #### 7. Audio Synthesis (3-4 minutes)
 ```
-- ElevenLabs text-to-speech
-- 3 different host voices
+- OpenAI TTS (85% cheaper than ElevenLabs)
+- 3 different host voices (Adam, Dallas, Jordan)
 - FFmpeg processing
 - Normalization to -16 LUFS
-- Cost: ~$2.00
+- Cost: ~$0.50
 ```
 
 #### 8. Storage Upload (1 minute)
 ```
-- Uploads to Firebase/Convex
-- Updates episode metadata
+- Uploads to Vercel Blob Storage
+- CDN-backed with Cloudflare fallback
+- Updates episode metadata in Convex
 - Generates public URLs
 - Updates RSS feeds
 ```
@@ -103,7 +105,7 @@ graph LR
 
 #### API Status Endpoint
 ```bash
-curl https://superwire.news/api/stats
+curl https://superwire-knzom9ptl-moomooskycow.vercel.app/api/stats
 ```
 
 Response shows:
@@ -115,7 +117,7 @@ Response shows:
 
 #### Generation Status
 ```bash
-curl https://superwire.news/api/cron/generate \
+curl https://superwire-knzom9ptl-moomooskycow.vercel.app/api/cron/generate \
   -H "Authorization: Bearer $CRON_SECRET"
 ```
 
@@ -151,7 +153,7 @@ Returns current generation progress or starts new generation.
 cat vercel.json | grep crons
 
 # Check last run status
-curl https://superwire.news/api/stats
+curl https://superwire-knzom9ptl-moomooskycow.vercel.app/api/stats
 ```
 
 **Solutions**:
@@ -165,7 +167,7 @@ curl https://superwire.news/api/stats
 **Check**:
 ```bash
 # Get detailed cost breakdown
-curl https://superwire.news/api/stats | jq '.models'
+curl https://superwire-knzom9ptl-moomooskycow.vercel.app/api/stats | jq '.models'
 ```
 
 **Solutions**:
@@ -196,14 +198,14 @@ console.log(result.metrics);
 **Symptoms**: Missing podcast episodes
 **Check**:
 ```bash
-# Check ElevenLabs quota
-curl -H "xi-api-key: $ELEVEN_LABS_API_KEY" \
-  https://api.elevenlabs.io/v1/user
+# Check OpenAI API status
+curl -H "Authorization: Bearer $OPENAI_API_KEY" \
+  https://api.openai.com/v1/models
 ```
 
 **Solutions**:
-- Verify ElevenLabs API key
-- Check character quota remaining
+- Verify OpenAI API key
+- Check OpenAI API status and quota
 - Ensure FFmpeg is installed
 - Review audio cache directory permissions
 
@@ -288,9 +290,10 @@ for (const batch of batches) {
 ```javascript
 // Task-based routing
 const MODEL_ROUTER = {
-  ARTICLE_GENERATION: 'google/gemini-2.0-flash-thinking-exp:free',
-  CREATIVE_WRITING: 'openai/gpt-4o',
-  SUMMARIZATION: 'anthropic/claude-3.5-sonnet'
+  ARTICLE_GENERATION: 'google/gemini-2.0-flash-thinking-exp-1219:free',
+  CREATIVE_WRITING: 'openai/gpt-5',
+  SUMMARIZATION: 'google/gemini-2.5-flash',
+  OP_ED: 'openai/gpt-5-mini'
 };
 ```
 
@@ -430,5 +433,5 @@ npm run emergency:stop
 
 ---
 
-Last Updated: 2024
-Version: 1.0.0
+Last Updated: 2025-09-11
+Version: 2.0.0

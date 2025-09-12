@@ -8,7 +8,7 @@ import {
   getTopicPriorities
 } from '../src/lib/editorial';
 import {
-  loadHostsConfiguration,
+  loadHostsConfig,
   selectHostForStory,
   generateHostDialogue,
   maintainHostConsistency,
@@ -22,7 +22,7 @@ describe('Editorial DNA and Host System', () => {
 
   beforeAll(async () => {
     editorialDNA = await loadEditorialDNA();
-    hostsConfig = await loadHostsConfiguration();
+    hostsConfig = loadHostsConfig();
     
     // Create test stories with varying characteristics
     testStories = [

@@ -15,7 +15,7 @@ import {
   generateExecutiveSummary 
 } from '../src/generators/brief';
 import { loadEditorialDNA } from '../src/lib/editorial';
-import { loadHostsConfiguration } from '../src/lib/hosts';
+import { loadHostsConfig } from '../src/lib/hosts';
 
 describe('Content Generation Pipeline', () => {
   let editorialDNA: any;
@@ -24,7 +24,7 @@ describe('Content Generation Pipeline', () => {
 
   beforeAll(async () => {
     editorialDNA = await loadEditorialDNA();
-    hosts = await loadHostsConfiguration();
+    hosts = loadHostsConfig();
     
     // Sample story for testing
     sampleStory = {

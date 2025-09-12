@@ -140,6 +140,8 @@ hosts:
       risk_taking: 9             # Introduces bold perspectives
       optimism_level: 8          # Enthusiastic about possibilities
       creativity: 9              # Unique framing and connections
+      analytical_depth: 6        # Insightful but not overwhelming
+      empathy_level: 7           # Connects with diverse perspectives
       
     perspectives:
       - "Here's what everyone's missing"

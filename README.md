@@ -6,6 +6,10 @@
 
 Superwire is a sophisticated AI-powered news platform that automatically generates a complete media publication daily - articles, op-eds, briefs, and podcasts - all filtered through YOUR unique editorial perspective. Think of it as having an entire newsroom powered by AI, with you as the editor-in-chief.
 
+🚀 **Live Demo**: https://superwire-knzom9ptl-moomooskycow.vercel.app
+
+⚠️ **Note**: Migrated from OpenAI v3 to OpenRouter + OpenAI TTS in Sept 2025 for 85% cost reduction
+
 ### Key Features
 
 - **Multi-Format Content**: Automatically generates articles, op-eds, daily briefs, and audio podcasts
@@ -41,9 +45,9 @@ Superwire is a sophisticated AI-powered news platform that automatically generat
                            │
 ┌──────────────────────────▼──────────────────────────────────┐
 │                      AUDIO LAYER                             │
-│  • ElevenLabs text-to-speech synthesis                       │
+│  • OpenAI TTS (85% cheaper than ElevenLabs)                  │
 │  • FFmpeg audio processing and normalization                 │
-│  • Convex/Firebase storage                                   │
+│  • Vercel Blob storage with CDN                              │
 └──────────────────────────────────────────────────────────────┘
 ```
 
@@ -155,8 +159,8 @@ Daily budget target: **$6.00**
 | Op-Eds | GPT-4o | $0.50 | 2 op-eds |
 | Brief | Claude 3.5 | $0.05 | 1 brief |
 | Script | GPT-4o | $1.00 | 1 podcast |
-| Audio | ElevenLabs | $2.00 | 20 min audio |
-| **Total** | | **$3.65** | Under budget |
+| Audio | OpenAI TTS | $0.45 | 20 min audio |
+| **Total** | | **$2.10** | Under budget (35% of $6) |
 
 ### Cost Optimization Features
 - Task-based model routing

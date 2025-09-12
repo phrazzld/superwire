@@ -607,7 +607,7 @@ const recordEpisode = async (episode: Episode): Promise<void> => {
     console.log("Using OpenAI TTS for intro generation");
     const result = await generateAudioForHost(intro, 'ADAM', 'hd');
     if (result.success && result.audioBuffer) {
-      introData = result.audioBuffer.buffer;
+      introData = result.audioBuffer.buffer as ArrayBuffer;
       console.log(`Intro generated with OpenAI TTS: ${result.characterCount} chars, $${result.cost?.toFixed(4)}`);
     } else {
       throw new Error(`Failed to generate intro audio: ${result.error}`);
@@ -634,6 +634,7 @@ const recordEpisode = async (episode: Episode): Promise<void> => {
   // Generate filename
   let filename = `${timestamp}-00-intro.mp3`;
 
+  // @ts-ignore - TypeScript 5.9 ArrayBufferLike compatibility issue
   fs.writeFile(`${EPISODES_DIR}/${filename}`, Buffer.from(introData), (err) => {
     if (err) throw err;
     console.log("The intro audio has been saved!");
@@ -650,7 +651,7 @@ const recordEpisode = async (episode: Episode): Promise<void> => {
       console.log(`Using OpenAI TTS for segment ${i + 1} with host ${hostName}`);
       const result = await generateAudioForHost(segments[i], hostName, 'standard');
       if (result.success && result.audioBuffer) {
-        segmentData = result.audioBuffer.buffer;
+        segmentData = result.audioBuffer.buffer as ArrayBuffer;
         console.log(`Segment ${i + 1} generated with OpenAI TTS: ${result.characterCount} chars, $${result.cost?.toFixed(4)}`);
       } else {
         throw new Error(`Failed to generate segment ${i + 1} audio: ${result.error}`);
@@ -680,6 +681,7 @@ const recordEpisode = async (episode: Episode): Promise<void> => {
 
     fs.writeFile(
       `${EPISODES_DIR}/${filename}`,
+      // @ts-ignore - TypeScript 5.9 ArrayBufferLike compatibility issue
       Buffer.from(segmentData),
       (err) => {
         if (err) throw err;
@@ -696,7 +698,7 @@ const recordEpisode = async (episode: Episode): Promise<void> => {
     console.log("Using OpenAI TTS for conclusion generation");
     const result = await generateAudioForHost(conclusion, 'ADAM', 'hd');
     if (result.success && result.audioBuffer) {
-      conclusionData = result.audioBuffer.buffer;
+      conclusionData = result.audioBuffer.buffer as ArrayBuffer;
       console.log(`Conclusion generated with OpenAI TTS: ${result.characterCount} chars, $${result.cost?.toFixed(4)}`);
     } else {
       throw new Error(`Failed to generate conclusion audio: ${result.error}`);
@@ -725,6 +727,7 @@ const recordEpisode = async (episode: Episode): Promise<void> => {
 
   fs.writeFile(
     `${EPISODES_DIR}/${filename}`,
+    // @ts-ignore - TypeScript 5.9 ArrayBufferLike compatibility issue
     Buffer.from(conclusionData),
     (err) => {
       if (err) throw err;

@@ -100,7 +100,7 @@ export async function uploadToStorage(
         'Content-Type': contentType,
         'Content-Length': fileStats.size.toString(),
       },
-      body: fileBuffer,
+      body: fileBuffer as any,
     });
 
     if (!uploadResponse.ok) {

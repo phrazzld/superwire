@@ -832,7 +832,7 @@ function checkAudioCorruption(buffer: Buffer, format: string): {
   const pattern = buffer.subarray(0, 4);
   let repeatedCount = 0;
   for (let i = 0; i < Math.min(buffer.length - 4, 1000); i += 4) {
-    if (buffer.subarray(i, i + 4).equals(pattern)) {
+    if (buffer.subarray(i, i + 4).equals(pattern as any)) {
       repeatedCount++;
     }
   }

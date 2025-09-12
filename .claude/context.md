@@ -215,6 +215,12 @@
 - **Yarn Resolutions for Transitive Dependencies**: Use `yarn resolutions` field in package.json to force updates of nested dependencies (form-data@4.0.1) when main package update doesn't pull latest versions
 - **Critical Vulnerability Prioritization**: Focus security fixes on critical vulnerabilities first vs addressing all vulnerability levels simultaneously - critical issues have immediate exploitation potential
 - **Post-Update Build Verification**: Always verify build process still works after security updates - dependency updates can introduce build compatibility issues requiring additional fixes
+- **Vercel Project Management CLI Pattern**: Use `vercel project ls` to identify project configuration issues rather than relying solely on dashboard inspection - CLI provides definitive project status and configuration details
+- **Duplicate Project Detection Strategy**: Similar project names (super-wire vs superwire) can cause deployment conflicts - systematic project listing reveals duplicates that cause deployment routing issues
+- **Vercel Project Removal with Force Flag**: `vercel remove <project-name> --yes` provides non-interactive project deletion for CI/CD automation and quick duplicate cleanup - bypasses confirmation prompts
+- **Empty Commit PR Check Refresh**: `git commit --allow-empty -m "trigger checks"` followed by push forces fresh CI/CD evaluation when PR checks reference stale or deleted resources
+- **GitHub PR Check Staleness Pattern**: PR status checks can reference deleted external resources (Vercel projects) creating persistent failure states - fresh commits bypass cached check results
+- **Vercel Project Naming Consistency**: Maintain exact naming consistency between GitHub repositories and Vercel projects to prevent routing conflicts and deployment confusion
 
 ## Bugs & Fixes
 - **Calendar Date State Initialization**: Calendar currentMonth state should initialize from selectedDate if available, otherwise new Date() to prevent calendar starting at wrong month when date is pre-selected
@@ -277,6 +283,7 @@
 - **Analytics Package vs Dashboard Feature Mismatch**: npm packages may not align with current Vercel platform capabilities - dashboard features often more current and reliable than package implementations
 - **Error Monitoring Environment Configuration**: Sentry requires SENTRY_DSN environment variable and proper source map upload configuration to function correctly - missing configuration causes silent failure of error tracking
 - **GitHub Vulnerability Count Discrepancy**: GitHub security tab showing 27 vulnerabilities while yarn audit reports 38 - indicates GitHub count may not include all transitive dependencies or has different severity thresholds
+- **Vercel Deployment Project Name Conflicts**: Duplicate or similar project names (super-wire vs superwire) create deployment routing conflicts and PR check failures - maintain exact consistency between repository and project names
 
 ## Decisions
 - **OpenRouter TaskType Extension Over New Infrastructure**: Adding ARTICLE_GENERATION to existing TaskType enum provides immediate AI integration with model optimization - leverages established infrastructure patterns for 90% time savings
@@ -332,3 +339,7 @@
 - **Yarn Resolutions for Dependency Control Over Waiting for Transitive Updates**: Use package.json resolutions field to force specific versions of nested dependencies when main package updates don't pull latest secure versions
 - **Critical First Over Comprehensive Remediation**: Prioritize fixing critical vulnerabilities (authorization bypass, RCE) over addressing all severity levels simultaneously - critical issues require immediate attention due to exploitation potential
 - **Build Verification Over Assumption of Compatibility**: Always test build process after security updates to ensure dependency changes don't introduce compatibility issues - security updates can have unexpected side effects on build tooling
+- **Vercel CLI Project Management Over Dashboard-Only Approach**: Use `vercel project ls` and CLI commands for systematic project management vs relying on dashboard inspection - CLI provides comprehensive project visibility and enables automation
+- **Proactive Duplicate Project Removal Over Reactive Debugging**: Systematically identify and remove duplicate projects (super-wire vs superwire) before deployment issues occur - prevents routing conflicts and PR check failures
+- **Empty Commit Strategy Over Manual PR Check Refresh**: Use `git commit --allow-empty` to force fresh CI/CD evaluation when PR checks reference stale external resources - more reliable than dashboard refresh attempts
+- **CLI-Based Project Operations Over Manual Dashboard Actions**: Vercel CLI with `--yes` flag enables automated project management without interactive prompts - essential for CI/CD integration and rapid troubleshooting

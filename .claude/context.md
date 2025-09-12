@@ -210,6 +210,11 @@
 - **Release Tracking Integration**: Sentry's release tracking integrates with Git commits and Vercel deployments to correlate errors with specific code changes - essential for production debugging workflow
 - **Automatic Error Categorization**: Sentry provides intelligent error grouping, fingerprinting, and trend analysis reducing noise from duplicate errors and highlighting new issues vs raw error logs
 - **Error Monitoring Documentation Pattern**: Comprehensive setup guides including Superwire-specific error scenarios, custom error tracking for audio generation pipeline, and troubleshooting procedures provide operational value vs basic integration instructions
+- **Security Vulnerability Audit Priority Pattern**: Always run `yarn audit` first to get accurate vulnerability count vs relying on GitHub's vulnerability dashboard - actual audit count (38) differed from GitHub count (27)
+- **Minor Version Updates for Security Fixes**: Most Next.js security vulnerabilities are resolved through minor version updates without breaking changes - 13.1.6 → 13.5.9 fixed authorization bypass
+- **Yarn Resolutions for Transitive Dependencies**: Use `yarn resolutions` field in package.json to force updates of nested dependencies (form-data@4.0.1) when main package update doesn't pull latest versions
+- **Critical Vulnerability Prioritization**: Focus security fixes on critical vulnerabilities first vs addressing all vulnerability levels simultaneously - critical issues have immediate exploitation potential
+- **Post-Update Build Verification**: Always verify build process still works after security updates - dependency updates can introduce build compatibility issues requiring additional fixes
 
 ## Bugs & Fixes
 - **Calendar Date State Initialization**: Calendar currentMonth state should initialize from selectedDate if available, otherwise new Date() to prevent calendar starting at wrong month when date is pre-selected
@@ -271,6 +276,7 @@
 - **Package Build Cache Persistence**: Clearing build cache and node_modules doesn't resolve npm package import issues in hybrid Next.js configurations - suggests deeper compatibility problems with router mixing
 - **Analytics Package vs Dashboard Feature Mismatch**: npm packages may not align with current Vercel platform capabilities - dashboard features often more current and reliable than package implementations
 - **Error Monitoring Environment Configuration**: Sentry requires SENTRY_DSN environment variable and proper source map upload configuration to function correctly - missing configuration causes silent failure of error tracking
+- **GitHub Vulnerability Count Discrepancy**: GitHub security tab showing 27 vulnerabilities while yarn audit reports 38 - indicates GitHub count may not include all transitive dependencies or has different severity thresholds
 
 ## Decisions
 - **OpenRouter TaskType Extension Over New Infrastructure**: Adding ARTICLE_GENERATION to existing TaskType enum provides immediate AI integration with model optimization - leverages established infrastructure patterns for 90% time savings
@@ -321,3 +327,8 @@
 - **Always Pattern-Scout Before Implementation**: Complete CDN framework with health checks, fallback strategies, and provider abstraction already existed (src/lib/cdn.ts) but undocumented - 5 minutes of searching prevented 60 minutes of redundant development
 - **Sophisticated Infrastructure May Exist Undocumented**: Production-ready systems with comprehensive error handling, automatic failover, and multi-provider support can exist in codebase without appearing in TODO lists or README files - always grep for related patterns first
 - **Configuration Over Implementation for Existing Systems**: When discovering complete infrastructure, focus on environment variable setup and documentation rather than building new code - existing CDN system only needed CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_API_TOKEN configuration
+- **Yarn Audit Over GitHub Security Tab**: Use `yarn audit` as primary vulnerability assessment tool vs relying on GitHub's security dashboard - yarn provides more comprehensive transitive dependency scanning and accurate vulnerability counts
+- **Minor Version Updates Over Major Version Changes for Security**: Security vulnerabilities in framework dependencies like Next.js are typically resolved through minor version updates - 13.1.6 → 13.5.9 provides security fixes without breaking changes
+- **Yarn Resolutions for Dependency Control Over Waiting for Transitive Updates**: Use package.json resolutions field to force specific versions of nested dependencies when main package updates don't pull latest secure versions
+- **Critical First Over Comprehensive Remediation**: Prioritize fixing critical vulnerabilities (authorization bypass, RCE) over addressing all severity levels simultaneously - critical issues require immediate attention due to exploitation potential
+- **Build Verification Over Assumption of Compatibility**: Always test build process after security updates to ensure dependency changes don't introduce compatibility issues - security updates can have unexpected side effects on build tooling

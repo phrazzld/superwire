@@ -18,6 +18,7 @@
 # misc
 .DS_Store
 *.pem
+*.bak
 
 # debug
 npm-debug.log*
@@ -26,7 +27,8 @@ yarn-error.log*
 .pnpm-debug.log*
 
 # local env files
-.env*.local
+.env*
+!.env.example
 
 # vercel
 .vercel
@@ -35,6 +37,18 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-super-wire-firebase-adminsdk-hsukl-d30227eea4.json
+# cost tracking
+costs.json
+costs.json.backup-*
+metrics.json
+knowledge.md
+tmp/
+
 .vscode
 .tool-versions
+
+# Migration artifacts
+migration-backup/
+tests-baseline.txt
+build-baseline.txt
+PR_DESCRIPTION.md

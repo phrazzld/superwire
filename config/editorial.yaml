@@ -1,0 +1,190 @@
+# Editorial DNA Configuration
+# Defines the distinct editorial voice, values, and perspective of your media organization
+
+editorial_dna:
+  # Core values that drive story selection and narrative framing
+  values:
+    - intellectual_honesty       # Commitment to truth over narrative
+    - technological_progress      # Belief in technology's positive potential
+    - human_flourishing          # Focus on human wellbeing and potential
+    - systems_thinking           # Understanding interconnected complexity
+    - constructive_skepticism    # Question without cynicism
+  
+  # Intellectual influences that shape perspective
+  influences:
+    thinkers:
+      - Richard Feynman          # Rigorous thinking, intellectual curiosity
+      - Carl Sagan               # Scientific wonder, cosmic perspective
+      - Stewart Brand            # Long-term thinking, pragmatic optimism
+    publications:
+      - The Economist            # Data-driven analysis, global perspective
+      - Stratechery              # Tech strategy, business models
+      - Wait But Why             # Deep dives, first principles thinking
+    styles:
+      - analytical               # Data-driven, evidence-based
+      - accessible               # Complex ideas made understandable
+      - occasionally_irreverent  # Serious topics, human touch
+  
+  # Topics and their importance weights (0-10 scale)
+  priorities:
+    climate_technology: 10       # Solutions to climate crisis
+    artificial_intelligence: 9   # AI development and implications
+    scientific_breakthroughs: 9  # Fundamental discoveries
+    geopolitics: 8              # Global power dynamics
+    space_exploration: 8        # Humanity's cosmic future
+    biotech_advances: 7         # Life sciences revolution
+    economic_systems: 7         # Markets, monetary policy
+    cultural_evolution: 6       # Social change, values shifts
+    energy_transitions: 8       # Clean energy, nuclear
+    education_innovation: 6     # Learning system evolution
+    sports: 2                   # Major events only
+    celebrity_gossip: 0         # Hard pass
+    crime_stories: 1            # Only systemic issues
+  
+  # Narrative approaches to actively avoid
+  avoid:
+    - doom_porn                 # Catastrophizing without solutions
+    - clickbait                 # Misleading headlines
+    - partisan_hackery          # Tribal political narratives
+    - surface_level_analysis    # Hot takes without depth
+    - false_balance            # Both-sidesism on settled facts
+    - outrage_farming          # Anger as engagement
+    - conspiracy_theories      # Unfounded speculation
+    - fear_mongering          # Exploiting anxieties
+  
+  # Perspectives to actively seek and highlight
+  seek:
+    - second_order_effects     # What happens next?
+    - historical_parallels     # Learning from the past
+    - contrarian_views        # Well-reasoned dissent
+    - systemic_analysis       # Root causes, not symptoms
+    - practical_applications  # How does this help?
+    - unintended_consequences # Hidden costs and benefits
+    - emerging_patterns      # Early signals of change
+    - cross_domain_insights  # Connections between fields
+
+# Story importance scoring weights
+importance_weights:
+  value_alignment: 3.0         # How well story aligns with core values
+  topic_relevance: 2.5        # Relevance to priority topics
+  future_impact: 2.0          # Potential long-term effects
+  novelty_factor: 1.5         # New information or perspective
+  systemic_relevance: 1.5     # Broader system implications
+  actionability: 1.0          # Can audience act on this?
+  geographic_proximity: 0.8   # Local vs global relevance
+  temporal_relevance: 0.7     # Timeliness of the story
+  
+  # Penalties (negative values)
+  clickbait_penalty: -5.0     # Sensationalist content
+  redundancy_penalty: -3.0    # Already covered extensively
+  triviality_penalty: -2.0    # Low importance stories
+  speculation_penalty: -1.5   # Unfounded predictions
+
+# Content filtering thresholds
+thresholds:
+  minimum_importance_score: 5.0  # Stories below this are filtered
+  maximum_daily_stories: 20       # Cap on stories per day
+  minimum_source_diversity: 3     # Require multiple sources
+  fact_check_confidence: 0.7      # Minimum factual confidence
+
+# Narrative tone configuration
+tone:
+  default_style: conversational_authority  # Knowledgeable but approachable
+  complexity_level: educated_generalist     # Assume intelligent audience
+  humor_threshold: 0.3                     # Occasional levity (0-1 scale)
+  
+  # Tone variations by topic
+  topic_tones:
+    climate_technology: urgent_optimism
+    artificial_intelligence: cautious_excitement
+    geopolitics: analytical_neutrality
+    scientific_breakthroughs: wonder_and_rigor
+    economic_systems: pragmatic_realism
+    cultural_evolution: empathetic_observation
+    crisis_coverage: calm_clarity
+
+# Editorial angles by story type
+editorial_angles:
+  breaking_news:
+    primary: "What are the immediate implications?"
+    secondary: "How does this connect to larger trends?"
+    avoid: "Hot takes without information"
+  
+  scientific_discovery:
+    primary: "What problem does this solve?"
+    secondary: "What new questions does this raise?"
+    avoid: "Overpromising on timeline"
+  
+  political_development:
+    primary: "What are the systemic effects?"
+    secondary: "Historical precedents and parallels"
+    avoid: "Partisan framing"
+  
+  technology_announcement:
+    primary: "Who benefits and who's disrupted?"
+    secondary: "Second-order consequences"
+    avoid: "Uncritical hype"
+  
+  economic_news:
+    primary: "What's the mechanism at work?"
+    secondary: "Distribution of impacts"
+    avoid: "Single-factor explanations"
+  
+  social_trend:
+    primary: "What's driving this change?"
+    secondary: "Generational vs cyclical patterns"
+    avoid: "Moral panic or uncritical celebration"
+
+# Source credibility weights
+source_credibility:
+  peer_reviewed_journals: 1.0
+  established_media: 0.8
+  government_data: 0.7
+  think_tanks: 0.6
+  corporate_releases: 0.4
+  social_media: 0.2
+  
+# Special coverage rules
+special_rules:
+  # Always cover if threshold met
+  always_cover:
+    - major_scientific_breakthroughs
+    - existential_risk_developments
+    - technological_paradigm_shifts
+    - significant_climate_solutions
+  
+  # Never cover regardless of popularity
+  never_cover:
+    - celebrity_relationships
+    - royal_family_drama
+    - sports_transfers
+    - fashion_trends
+    - viral_tiktok_trends
+  
+  # Require additional verification
+  requires_verification:
+    - leaked_documents
+    - anonymous_sources
+    - extraordinary_claims
+    - market_moving_information
+
+# Output format preferences
+output_preferences:
+  summary_style: tldr_plus_context  # Brief summary with key context
+  quote_selection: substantive_only  # Skip platitudes
+  data_presentation: visualizable    # Include chartable data
+  conclusion_style: forward_looking  # What happens next?
+  
+# Update frequency and timing
+timing:
+  daily_generation: "06:00"        # UTC time for daily edition
+  breaking_threshold: 8.5          # Importance score for immediate coverage
+  weekend_adjustment: 0.7          # Reduce volume on weekends
+  
+# Experimental features (can be toggled)
+experimental:
+  predictive_modeling: true         # Include predictions based on patterns
+  contrarian_corner: true          # Dedicated contrarian perspective
+  connection_mapping: true          # Show how stories connect
+  solution_spotlight: true          # Highlight problem-solving approaches
+  long_term_tracking: true          # Follow up on previous predictions

@@ -1,0 +1,94 @@
+# News Source Configuration
+# Each source defines an RSS feed and CSS selector for article extraction
+
+sources:
+  - name: reuters
+    displayName: Reuters
+    rss: https://www.reuters.com/rssfeed/topNews
+    selector: article.article-body
+    enabled: true
+    priority: 1
+    rateLimit:
+      requestsPerMinute: 30
+    fallbackSelectors:
+      - .StandardArticleBody_body
+      - .article-body-wrapper
+      - article[class*="article"]
+
+  - name: ap
+    displayName: Associated Press
+    rss: https://apnews.com/rss
+    selector: .RichTextStoryBody
+    enabled: true
+    priority: 1
+    rateLimit:
+      requestsPerMinute: 30
+    fallbackSelectors:
+      - .Article
+      - div[class*="StoryBody"]
+      - .entry-content
+
+  - name: bbc
+    displayName: BBC News
+    rss: https://feeds.bbci.co.uk/news/rss.xml
+    selector: .ssrcss-pv1rh6-ArticleWrapper
+    enabled: true
+    priority: 2
+    rateLimit:
+      requestsPerMinute: 20
+    fallbackSelectors:
+      - article[role="main"]
+      - .article__body
+      - main article
+
+  - name: guardian
+    displayName: The Guardian
+    rss: https://www.theguardian.com/world/rss
+    selector: .article-body-commercial-selector
+    enabled: true
+    priority: 2
+    rateLimit:
+      requestsPerMinute: 20
+    fallbackSelectors:
+      - .content__article-body
+      - div[itemprop="articleBody"]
+      - .article-body
+
+  - name: nyt
+    displayName: New York Times
+    rss: https://rss.nytimes.com/services/xml/rss/nyt/HomePage.xml
+    selector: .StoryBodyCompanionColumn
+    enabled: false  # Disabled due to paywall
+    priority: 1
+    requiresAuth: true
+    rateLimit:
+      requestsPerMinute: 10
+    fallbackSelectors:
+      - section[name="articleBody"]
+      - .meteredContent
+      - article[class*="story"]
+
+# Global settings for news ingestion
+settings:
+  maxArticlesPerSource: 20
+  maxConcurrentRequests: 5
+  requestTimeout: 10000  # milliseconds
+  retryAttempts: 3
+  retryDelay: 1000  # milliseconds
+  userAgent: "Superwire News Bot/1.0 (+https://superwire.news/bot)"
+  
+# Quality filters
+qualityFilters:
+  minArticleLength: 200  # minimum words
+  maxArticleLength: 5000  # maximum words
+  requiredElements:
+    - headline
+    - content
+    - pubDate
+  blockedDomains:
+    - example.com
+    - test.com
+  blockedKeywords:
+    - "sponsored content"
+    - "advertisement"
+    - "paid promotion"

@@ -1,4 +1,4 @@
-import { NextApiRequest, NextApiResponse } from 'next';
+import { NextRequest, NextResponse } from 'next/server';
 
 /**
  * API endpoint for progressive article loading - remaining content
@@ -52,24 +52,25 @@ Critics argue that even these ambitious targets may not be enough to limit warmi
   return mockRemainingContent[articleId] || null;
 };
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
+interface Params {
+  params: Promise<{ id: string }>;
+}
+
+export async function GET(
+  request: NextRequest,
+  { params }: Params
 ) {
-  if (req.method !== 'GET') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
-
-  const { id } = req.query;
-  
-  if (!id || typeof id !== 'string') {
-    return res.status(400).json({ error: 'Invalid article ID' });
-  }
-
   try {
-    // Add cache headers for CDN - longer cache for remaining content
-    res.setHeader('Cache-Control', 'public, max-age=3600, stale-while-revalidate=7200');
+    // Await the params as required in Next.js 15
+    const { id } = await params;
     
+    if (!id) {
+      return NextResponse.json(
+        { error: 'Invalid article ID' },
+        { status: 400 }
+      );
+    }
+
     // Simulate network delay for realistic progressive loading
     if (process.env.NODE_ENV === 'development') {
       await new Promise(resolve => setTimeout(resolve, 500));
@@ -78,19 +79,36 @@ export default async function handler(
     const remainingContent = await getArticleRemainingContent(id);
     
     if (!remainingContent) {
-      return res.status(404).json({ error: 'Article content not found' });
+      return NextResponse.json(
+        { error: 'Article content not found' },
+        { status: 404 }
+      );
     }
     
-    return res.status(200).json({
-      articleId: id,
-      content: remainingContent,
-      timestamp: new Date().toISOString()
-    });
+    return NextResponse.json(
+      {
+        articleId: id,
+        content: remainingContent,
+        timestamp: new Date().toISOString()
+      },
+      {
+        status: 200,
+        headers: {
+          'Cache-Control': 'public, max-age=3600, stale-while-revalidate=7200',
+        },
+      }
+    );
   } catch (error) {
     console.error('Error fetching remaining content:', error);
-    return res.status(500).json({ 
-      error: 'Failed to fetch article content',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    });
+    return NextResponse.json(
+      { 
+        error: 'Failed to fetch article content',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      },
+      { status: 500 }
+    );
   }
 }
+
+// Configure caching with longer revalidation for remaining content
+export const revalidate = 3600; // Revalidate every hour

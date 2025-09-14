@@ -1,6 +1,6 @@
-import { NextApiRequest, NextApiResponse } from "next";
+import { NextResponse } from "next/server";
 import RSS from "rss";
-import { getAllEpisodes } from "../../src/lib/vercel-blob";
+import { getAllEpisodes } from "../../../src/lib/vercel-blob";
 
 interface Episode {
   name: string;
@@ -86,15 +86,7 @@ async function fetchAllEpisodes(): Promise<Episode[]> {
   }
 }
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
-  // Only allow GET requests
-  if (req.method !== "GET") {
-    return res.status(405).json({ error: "Method not allowed" });
-  }
-
+export async function GET() {
   try {
     // Fetch all episodes
     const episodes = await fetchAllEpisodes();
@@ -171,19 +163,27 @@ export default async function handler(
     // Generate XML
     const xml = feed.xml({ indent: true });
 
-    // Set response headers
-    res.setHeader('Content-Type', 'application/rss+xml; charset=utf-8');
-    res.setHeader('Cache-Control', 'public, max-age=3600'); // Cache for 1 hour
-    
-    // Send RSS feed
-    res.status(200).send(xml);
+    // Return RSS feed with proper headers
+    return new Response(xml, {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/rss+xml; charset=utf-8',
+        'Cache-Control': 'public, max-age=3600', // Cache for 1 hour
+      },
+    });
     
   } catch (error) {
     console.error("Error generating RSS feed:", error);
     
-    res.status(500).json({
-      error: "Internal server error",
-      message: error instanceof Error ? error.message : "Unknown error"
-    });
+    return NextResponse.json(
+      {
+        error: "Internal server error",
+        message: error instanceof Error ? error.message : "Unknown error"
+      },
+      { status: 500 }
+    );
   }
 }
+
+// Add caching configuration
+export const revalidate = 300; // Revalidate every 5 minutes

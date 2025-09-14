@@ -1,4 +1,4 @@
-import { NextApiRequest, NextApiResponse } from 'next';
+import { NextRequest, NextResponse } from 'next/server';
 
 /**
  * API endpoint for progressive article loading - first paragraph
@@ -24,41 +24,59 @@ const getArticleFirstParagraph = async (articleId: string): Promise<string | nul
   return mockArticles[articleId] || null;
 };
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
+interface Params {
+  params: Promise<{ id: string }>;
+}
+
+export async function GET(
+  request: NextRequest,
+  { params }: Params
 ) {
-  if (req.method !== 'GET') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
-
-  const { id } = req.query;
-  
-  if (!id || typeof id !== 'string') {
-    return res.status(400).json({ error: 'Invalid article ID' });
-  }
-
   try {
-    // Add cache headers for CDN
-    res.setHeader('Cache-Control', 'public, max-age=300, stale-while-revalidate=600');
+    // Await the params as required in Next.js 15
+    const { id } = await params;
     
+    if (!id) {
+      return NextResponse.json(
+        { error: 'Invalid article ID' },
+        { status: 400 }
+      );
+    }
+
     const firstParagraph = await getArticleFirstParagraph(id);
     
     if (!firstParagraph) {
-      return res.status(404).json({ error: 'Article not found' });
+      return NextResponse.json(
+        { error: 'Article not found' },
+        { status: 404 }
+      );
     }
     
     // Return first paragraph with minimal delay
-    return res.status(200).json({
-      articleId: id,
-      content: firstParagraph,
-      timestamp: new Date().toISOString()
-    });
+    return NextResponse.json(
+      {
+        articleId: id,
+        content: firstParagraph,
+        timestamp: new Date().toISOString()
+      },
+      {
+        status: 200,
+        headers: {
+          'Cache-Control': 'public, max-age=300, stale-while-revalidate=600',
+        },
+      }
+    );
   } catch (error) {
     console.error('Error fetching first paragraph:', error);
-    return res.status(500).json({ 
-      error: 'Failed to fetch article content',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    });
+    return NextResponse.json(
+      { 
+        error: 'Failed to fetch article content',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      },
+      { status: 500 }
+    );
   }
 }
+
+// Configure caching with revalidate
+export const revalidate = 300; // Revalidate every 5 minutes

@@ -1,4 +1,4 @@
-import { NextApiRequest, NextApiResponse } from 'next';
+import { NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
 
@@ -96,14 +96,10 @@ function readMetricsFile(): any {
   }
 }
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse<StatsResponse | { error: string }>
-) {
-  if (req.method !== 'GET') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
+// Force dynamic rendering since we're reading from filesystem
+export const dynamic = 'force-dynamic';
 
+export async function GET(request: Request) {
   try {
     const costs = readCostsFile();
     const metrics = readMetricsFile();
@@ -230,14 +226,17 @@ export default async function handler(
       }
     };
     
-    // Set cache headers (5 minutes for stats)
-    res.setHeader('Cache-Control', 'public, max-age=300, s-maxage=300');
-    
-    return res.status(200).json(stats);
+    // Return with cache headers (5 minutes for stats)
+    return NextResponse.json(stats, {
+      headers: {
+        'Cache-Control': 'public, max-age=300, s-maxage=300'
+      }
+    });
   } catch (error) {
     console.error('Error generating stats:', error);
-    return res.status(500).json({ 
-      error: 'Failed to generate statistics'
-    });
+    return NextResponse.json(
+      { error: 'Failed to generate statistics' },
+      { status: 500 }
+    );
   }
 }

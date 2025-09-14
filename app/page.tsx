@@ -1,28 +1,13 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import dynamic from "next/dynamic";
 // Firebase storage removed - using Vercel Blob Storage
 import ArticleCard, { ArticleGrid } from "./components/ArticleCard";
 import ContentTabs, { Tab } from "./components/ContentTabs";
 import CalendarView, { CompactCalendar } from "./components/CalendarView";
 
-// Lazy load AudioPlayer to reduce initial bundle size
-const AudioPlayer = dynamic(
-  () => import("./components/AudioPlayer"),
-  {
-    loading: () => (
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <div className="animate-pulse">
-          <div className="h-4 bg-gray-200 rounded w-3/4 mb-4"></div>
-          <div className="h-12 bg-gray-200 rounded mb-2"></div>
-          <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-        </div>
-      </div>
-    ),
-    ssr: false // Disable SSR for AudioPlayer since it uses browser APIs
-  }
-);
+// Import AudioPlayer directly to avoid chunk loading issues with hybrid router setup
+import AudioPlayer from "./components/AudioPlayer";
 
 // Content type interfaces
 interface Article {

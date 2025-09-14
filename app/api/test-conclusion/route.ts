@@ -1,7 +1,7 @@
 // Test endpoint for verifying conclusion generation with OpenRouter
-import type { NextApiRequest, NextApiResponse } from "next";
-import { OpenRouterClient, TaskType } from "../../src/lib/openrouter";
-import { HOSTS, PROMPTS } from "../../constants";
+import { NextRequest, NextResponse } from "next/server";
+import { OpenRouterClient, TaskType } from "../../../src/lib/openrouter";
+import { HOSTS, PROMPTS } from "../../../constants";
 
 const MAX_RETRIES = 5;
 const RETRY_DELAY = 5000;
@@ -63,14 +63,7 @@ const writeConclusion = async (headlines: any[]): Promise<string> => {
   return response.content;
 };
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
-
+export async function POST(request: NextRequest) {
   try {
     // Test headlines
     const testHeadlines = [
@@ -84,17 +77,43 @@ export default async function handler(
     
     console.log("Conclusion generated successfully!");
     
-    res.status(200).json({ 
-      success: true, 
-      conclusion,
-      length: conclusion.length,
-      model: "GPT-4o via OpenRouter"
-    });
+    return NextResponse.json(
+      { 
+        success: true, 
+        conclusion,
+        length: conclusion.length,
+        model: "GPT-4o via OpenRouter"
+      },
+      { status: 200 }
+    );
   } catch (error: any) {
     console.error("Test failed:", error);
-    res.status(500).json({ 
-      error: error.message || "Test failed",
-      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
-    });
+    return NextResponse.json(
+      { 
+        error: error.message || "Test failed",
+        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      },
+      { status: 500 }
+    );
   }
 }
+
+// Also support GET for simple testing (returns info only)
+export async function GET(request: NextRequest) {
+  return NextResponse.json(
+    {
+      message: "Test conclusion endpoint",
+      description: "POST to this endpoint to test conclusion generation with OpenRouter",
+      testHeadlines: [
+        "Tech Giants Report Record Earnings Despite Economic Uncertainty",
+        "Climate Summit Reaches Historic Agreement on Carbon Reduction",
+        "New Study Reveals Breakthrough in Quantum Computing"
+      ],
+      model: "GPT-4o via OpenRouter"
+    },
+    { status: 200 }
+  );
+}
+
+// This is a test endpoint, so we want it to be dynamic
+export const dynamic = 'force-dynamic';

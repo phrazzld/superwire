@@ -33,6 +33,7 @@
   "exclude": [
     "node_modules",
     "scripts/**/*",
-    "tests/**/*"
+    "tests/**/*",
+    "migration-backup/**/*"
   ]
 }

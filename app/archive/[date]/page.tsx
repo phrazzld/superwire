@@ -37,12 +37,12 @@ interface Episode {
 }
 
 interface ArchivePageProps {
-  params: { date: string };
+  params: Promise<{ date: string }>;
 }
 
 // Simple client component for archive page
-export default function ArchivePage({ params }: ArchivePageProps) {
-  const { date } = params;
+export default async function ArchivePage({ params }: ArchivePageProps) {
+  const { date } = await params;
   
   const formattedDate = new Date(date).toLocaleDateString('en-US', {
     weekday: 'long',

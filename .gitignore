@@ -46,3 +46,9 @@ tmp/
 
 .vscode
 .tool-versions
+
+# Migration artifacts
+migration-backup/
+tests-baseline.txt
+build-baseline.txt
+PR_DESCRIPTION.md

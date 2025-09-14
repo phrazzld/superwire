@@ -1,5 +1,5 @@
-import { NextApiRequest, NextApiResponse } from 'next';
-import { getAllEpisodes } from '../../src/lib/vercel-blob';
+import { NextResponse } from 'next/server';
+import { getAllEpisodes } from '../../../src/lib/vercel-blob';
 
 // JSON Feed specification: https://www.jsonfeed.org/version/1.1/
 interface JSONFeed {
@@ -35,14 +35,7 @@ interface JSONFeed {
   }>;
 }
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
-  if (req.method !== 'GET') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
-
+export async function GET() {
   try {
     // Get episodes from Vercel Blob Storage
     const episodesList = await getAllEpisodes();
@@ -94,16 +87,23 @@ export default async function handler(
       items: episodes
     };
 
-    // Set cache headers (1 hour for current content)
-    res.setHeader('Cache-Control', 'public, max-age=3600, s-maxage=3600');
-    res.setHeader('Content-Type', 'application/feed+json');
-    
-    return res.status(200).json(feed);
+    return NextResponse.json(feed, {
+      headers: {
+        'Cache-Control': 'public, max-age=3600, s-maxage=3600',
+        'Content-Type': 'application/feed+json',
+      },
+    });
   } catch (error) {
     console.error('Error generating JSON feed:', error);
-    return res.status(500).json({ 
-      error: 'Failed to generate JSON feed',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    });
+    return NextResponse.json(
+      { 
+        error: 'Failed to generate JSON feed',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      },
+      { status: 500 }
+    );
   }
 }
+
+// Add caching configuration  
+export const revalidate = 300; // Revalidate every 5 minutes

@@ -1,5 +1,5 @@
-import { NextApiRequest, NextApiResponse } from "next";
-import { getAllEpisodes } from "../../../src/lib/vercel-blob";
+import { NextRequest, NextResponse } from "next/server";
+import { getAllEpisodes } from "../../../../src/lib/vercel-blob";
 
 // Content type interfaces (matching app/page.tsx)
 interface Article {
@@ -163,31 +163,37 @@ function generateMockContent(date: string): ContentByDate {
   };
 }
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse
-) {
-  // Only allow GET requests
-  if (req.method !== "GET") {
-    return res.status(405).json({ error: "Method not allowed" });
-  }
+interface Params {
+  params: Promise<{ date: string }>;
+}
 
+export async function GET(
+  request: NextRequest,
+  { params }: Params
+) {
   try {
-    const { date } = req.query;
+    // Await the params as required in Next.js 15
+    const { date } = await params;
     
-    if (typeof date !== "string") {
-      return res.status(400).json({
-        error: "Invalid date parameter",
-        message: "Date must be a string"
-      });
+    if (!date) {
+      return NextResponse.json(
+        {
+          error: "Invalid date parameter",
+          message: "Date must be provided"
+        },
+        { status: 400 }
+      );
     }
     
     // Validate date format
     if (!isValidDateFormat(date)) {
-      return res.status(400).json({
-        error: "Invalid date format",
-        message: "Date must be in YYYY-MM-DD format"
-      });
+      return NextResponse.json(
+        {
+          error: "Invalid date format",
+          message: "Date must be in YYYY-MM-DD format"
+        },
+        { status: 400 }
+      );
     }
     
     // Check if date is not in the future
@@ -196,10 +202,13 @@ export default async function handler(
     today.setHours(23, 59, 59, 999);
     
     if (requestedDate > today) {
-      return res.status(404).json({
-        error: "Future date",
-        message: "Cannot retrieve content for future dates"
-      });
+      return NextResponse.json(
+        {
+          error: "Future date",
+          message: "Cannot retrieve content for future dates"
+        },
+        { status: 404 }
+      );
     }
     
     // Fetch episodes from Firebase Storage
@@ -223,15 +232,26 @@ export default async function handler(
       ? "public, max-age=3600" // 1 hour for today's content
       : "public, max-age=86400, immutable"; // 24 hours for past content
     
-    res.setHeader("Cache-Control", cacheControl);
-    res.status(200).json(content);
+    return NextResponse.json(content, {
+      status: 200,
+      headers: {
+        "Cache-Control": cacheControl,
+      },
+    });
     
   } catch (error) {
     console.error("Error in content API route:", error);
     
-    res.status(500).json({
-      error: "Internal server error",
-      message: error instanceof Error ? error.message : "Unknown error"
-    });
+    return NextResponse.json(
+      {
+        error: "Internal server error",
+        message: error instanceof Error ? error.message : "Unknown error"
+      },
+      { status: 500 }
+    );
   }
 }
+
+// Dynamic caching based on content age
+// Today's content refreshes more frequently
+export const dynamic = 'force-dynamic';
